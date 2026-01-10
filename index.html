@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Elite Shop Manager</title>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); padding-bottom: 90px; color: #1e293b; }
+        
+        /* Header & Sync */
+        .header { padding: 15px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; }
+        .online-dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .offline-dot { background: var(--danger); }
+        
+        .container { padding: 12px; max-width: 500px; margin: auto; }
+        .card { background: #fff; padding: 16px; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #f1f5f9; }
+        
+        /* Sub-Navigation for Inventory */
+        .sub-nav { display: flex; gap: 10px; margin-bottom: 15px; background: #e2e8f0; padding: 5px; border-radius: 12px; }
+        .sub-nav button { flex: 1; border: none; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; background: none; color: #64748b; }
+        .sub-nav button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .stat-card { padding: 12px; border-radius: 12px; color: white; }
+        
+        label { display: block; font-size: 10px; font-weight: 700; color: #64748b; margin: 8px 0 2px; text-transform: uppercase; }
+        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 15px; background: #fcfcfd; }
+        
+        .action-btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; }
+        .btn-sm { border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .btn-del { background: #fee2e2; color: var(--danger); }
+        .btn-edit { background: #e0f2fe; color: var(--primary); }
+        
+        .group-title { background: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 12px; margin: 15px 0 5px; display: flex; justify-content: space-between; }
+        
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #e2e8f0; }
+        .nav-item { border: none; background: none; color: #94a3b8; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1 style="font-size: 18px; margin:0;">ELITE SHOP</h1>
+    <div class="status-indicator">
+        <span id="sync-label">OFFLINE</span>
+        <div id="status-dot" class="dot"></div>
+        <button onclick="syncData()" style="background:none; border:none; font-size:16px; cursor:pointer;">🔄</button>
+    </div>
+</div>
+
+<div class="container">
+    <section id="dashboard">
+        <div class="stat-grid">
+            <div class="stat-card" style="background: var(--primary);"><small>Today's Sales</small><br><strong id="dash-sales">$0</strong></div>
+            <div class="stat-card" style="background: var(--success);"><small>Today's Profit</small><br><strong id="dash-profit">$0</strong></div>
+        </div>
+        <div class="card">
+            <label>Report Filter</label>
+            <div style="display:flex; gap:8px;"><input type="date" id="date-from"><input type="date" id="date-to"></div>
+            <button class="action-btn" style="margin-top:10px; padding:10px;" onclick="loadDashboard()">Filter Report</button>
+            <div style="display:flex; justify-content:space-between; margin-top:15px;"><span>Range Profit:</span> <span id="m-prof" style="font-weight:bold; color:var(--success)">$0</span></div>
+        </div>
+    </section>
+
+    <section id="sales-entry" class="hidden">
+        <div class="card">
+            <label>Date</label>
+            <input type="date" id="sale-date">
+            <label>Category</label>
+            <select id="cat" onchange="toggleSaleForm()">
+                <option value="Accessories">Accessories</option>
+                <option value="Expense">Business Expense</option>
+            </select>
+            <div id="form-stock-sale">
+                <label>Item Name</label>
+                <input list="stock-list" id="sale-search" placeholder="Search V8, Brand..." onchange="fillPrice()">
+                <datalist id="stock-list"></datalist>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="sale-qty" value="1" placeholder="Qty">
+                    <input type="number" id="sale-price" placeholder="Price">
+                </div>
+            </div>
+            <div id="form-expense-sale" class="hidden">
+                <input type="text" id="exp-name" placeholder="Reason (Rent, Bill...)">
+                <input type="number" id="exp-amount" placeholder="Amount">
+            </div>
+            <button class="action-btn" onclick="handleSaveSale()">SAVE RECORD</button>
+        </div>
+    </section>
+
+    <section id="inventory" class="hidden">
+        <div class="sub-nav">
+            <button id="sub-btn-list" class="active" onclick="switchInvTab('list')">📦 AVAILABLE STOCK</button>
+            <button id="sub-btn-add" onclick="switchInvTab('add')">➕ ADD NEW STOCK</button>
+        </div>
+
+        <div id="inv-tab-list">
+            <input type="text" id="inv-search" placeholder="🔍 Search stock list..." onkeyup="renderStockList()">
+            <div id="stock-display-area"></div>
+        </div>
+
+        <div id="inv-tab-add" class="hidden">
+            <div class="card">
+                <label>Plug / Tag Type</label>
+                <select id="inv-tag">
+                    <option value="V8 Android">V8 Android</option>
+                    <option value="Type-C">Type-C</option>
+                    <option value="iPhone">iPhone</option>
+                    <option value="Phone Device">Phone Device</option>
+                </select>
+                <input type="text" id="inv-name" placeholder="Brand Name (e.g. Samsung)">
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="inv-buy" placeholder="Buy Cost">
+                    <input type="number" id="inv-sell" placeholder="Sell Price">
+                </div>
+                <input type="number" id="inv-qty" placeholder="Quantity">
+                <button class="action-btn" onclick="saveNewStock()">CONFIRM ADD STOCK</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="records" class="hidden">
+        <div id="report-list"></div>
+    </section>
+</div>
+
+<nav class="bottom-nav">
+    <button class="nav-item active" id="btn-dash" onclick="showSection('dashboard')">🏠<br>Dash</button>
+    <button class="nav-item" id="btn-sale" onclick="showSection('sales-entry')">➕<br>Sale</button>
+    <button class="nav-item" id="btn-inv" onclick="showSection('inventory')">📦<br>Stocks</button>
+    <button class="nav-item" id="btn-rec" onclick="showSection('records')">📊<br>Report</button>
+</nav>
+
+<script>
+    const db = new Dexie("EliteShopProDB");
+    db.version(1).stores({ 
+        records: '++id, date, item, sellPrice, buyPrice, category, qty',
+        inventory: '++id, name, tag, buyPrice, sellPrice, qty'
+    });
+
+    // NAVIGATION
+    function showSection(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.remove('hidden');
+        document.getElementById('btn-' + id.substring(0,3)).classList.add('active');
+        if(id === 'sales-entry') { document.getElementById('sale-date').value = new Date().toISOString().split('T')[0]; updateSaleDatalist(); }
+        if(id === 'inventory') renderStockList();
+        if(id === 'dashboard') loadDashboard();
+        if(id === 'records') loadReports();
+    }
+
+    function switchInvTab(tab) {
+        document.getElementById('inv-tab-list').classList.toggle('hidden', tab !== 'list');
+        document.getElementById('inv-tab-add').classList.toggle('hidden', tab !== 'add');
+        document.getElementById('sub-btn-list').classList.toggle('active', tab === 'list');
+        document.getElementById('sub-btn-add').classList.toggle('active', tab === 'add');
+        if(tab === 'list') renderStockList();
+    }
+
+    // STOCK LOGIC
+    async function saveNewStock() {
+        await db.inventory.add({
+            tag: document.getElementById('inv-tag').value,
+            name: document.getElementById('inv-name').value,
+            buyPrice: parseFloat(document.getElementById('inv-buy').value) || 0,
+            sellPrice: parseFloat(document.getElementById('inv-sell').value) || 0,
+            qty: parseInt(document.getElementById('inv-qty').value) || 0
+        });
+        alert("Stock Added!");
+        switchInvTab('list');
+    }
+
+    async function renderStockList() {
+        const search = document.getElementById('inv-search').value.toLowerCase();
+        let items = await db.inventory.toArray();
+        if(search) items = items.filter(i => i.name.toLowerCase().includes(search) || i.tag.toLowerCase().includes(search));
+
+        const groups = {};
+        items.forEach(i => {
+            if(!groups[i.tag]) groups[i.tag] = { total: 0, items: [] };
+            groups[i.tag].total += i.qty;
+            groups[i.tag].items.push(i);
+        });
+
+        let html = '';
+        for(let tag in groups) {
+            html += `<div class="group-title"><span>${tag}</span> <span>Total: ${groups[tag].total}</span></div>`;
+            groups[tag].items.forEach(i => {
+                html += `<div class="card" style="margin-bottom:6px;">
+                    <div style="display:flex; justify-content:space-between"><b>${i.name}</b> <span>${i.qty} Left</span></div>
+                    <div style="display:flex; gap:10px; margin-top:8px;">
+                        <button onclick="editInv(${i.id}, ${i.qty})" class="btn-sm btn-edit">Update Qty</button>
+                        <button onclick="deleteInv(${i.id})" class="btn-sm btn-del">Delete</button>
+                    </div>
+                </div>`;
+            });
+        }
+        document.getElementById('stock-display-area').innerHTML = html;
+    }
+
+    async function editInv(id, old) { const n = prompt("New Quantity:", old); if(n) { await db.inventory.update(id, {qty: parseInt(n)}); renderStockList(); } }
+    async function deleteInv(id) { if(confirm("Delete this product?")) { await db.inventory.delete(id); renderStockList(); } }
+
+    // SALES LOGIC
+    function toggleSaleForm() {
+        const isExp = document.getElementById('cat').value === 'Expense';
+        document.getElementById('form-stock-sale').classList.toggle('hidden', isExp);
+        document.getElementById('form-expense-sale').classList.toggle('hidden', !isExp);
+    }
+
+    async function updateSaleDatalist() {
+        const items = await db.inventory.toArray();
+        document.getElementById('stock-list').innerHTML = items.map(i => `<option value="${i.name} [${i.tag}]">`).join('');
+    }
+
+    async function fillPrice() {
+        const name = document.getElementById('sale-search').value.split(' [')[0];
+        const item = await db.inventory.where('name').equals(name).first();
+        if(item) document.getElementById('sale-price').value = item.sellPrice;
+    }
+
+    async function handleSaveSale() {
+        const cat = document.getElementById('cat').value;
+        const rec = { date: document.getElementById('sale-date').value, category: cat };
+        
+        if(cat === 'Expense') {
+            rec.item = "EXP: " + document.getElementById('exp-name').value;
+            rec.buyPrice = parseFloat(document.getElementById('exp-amount').value);
+            rec.sellPrice = 0;
+        } else {
+            const name = document.getElementById('sale-search').value.split(' [')[0];
+            const item = await db.inventory.where('name').equals(name).first();
+            rec.item = document.getElementById('sale-search').value;
+            rec.qty = parseInt(document.getElementById('sale-qty').value);
+            rec.sellPrice = parseFloat(document.getElementById('sale-price').value);
+            rec.buyPrice = (item ? item.buyPrice : 0) * rec.qty;
+            if(item) await db.inventory.update(item.id, { qty: item.qty - rec.qty });
+        }
+        await db.records.add(rec);
+        alert("Saved!"); showSection('dashboard');
+    }
+
+    async function loadDashboard() {
+        const today = new Date().toISOString().split('T')[0];
+        const all = await db.records.toArray();
+        let sales = 0, prof = 0;
+        all.forEach(r => { if(r.date === today) { sales += r.sellPrice; prof += (r.sellPrice - r.buyPrice); } });
+        document.getElementById('dash-sales').innerText = `$${sales.toFixed(2)}`;
+        document.getElementById('dash-profit').innerText = `$${prof.toFixed(2)}`;
+    }
+
+    showSection('dashboard');
+</script>
+</body>
+</html>
