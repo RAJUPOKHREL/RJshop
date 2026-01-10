@@ -3,69 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elite Shop Manager</title>
+    <title>Elite Shop Manager - Full Pro</title>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <style>
         :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); padding-bottom: 90px; color: #1e293b; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); padding-bottom: 110px; color: #1e293b; }
         
-        /* Header & Sync */
+        /* Header & Online Sync */
         .header { padding: 15px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
         .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; }
-        .online-dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        .offline-dot { background: var(--danger); }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--success); box-shadow: 0 0 5px var(--success); }
         
         .container { padding: 12px; max-width: 500px; margin: auto; }
         .card { background: #fff; padding: 16px; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #f1f5f9; }
         
-        /* Sub-Navigation for Inventory */
+        /* Dashboard Stats */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .mini-stat { padding: 16px; border-radius: 16px; color: white; }
+        
+        /* Inputs & Large Buttons */
+        label { display: block; font-size: 11px; font-weight: 700; color: #64748b; margin: 10px 0 4px; text-transform: uppercase; }
+        input, select { width: 100%; padding: 14px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 16px; box-sizing: border-box; background: #fcfcfd; }
+        .action-btn { background: var(--primary); color: white; border: none; width: 100%; padding: 18px; border-radius: 14px; font-weight: 800; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .action-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+        /* Inventory Sub-Nav */
         .sub-nav { display: flex; gap: 10px; margin-bottom: 15px; background: #e2e8f0; padding: 5px; border-radius: 12px; }
-        .sub-nav button { flex: 1; border: none; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; background: none; color: #64748b; }
+        .sub-nav button { flex: 1; border: none; padding: 12px; border-radius: 9px; font-weight: 700; font-size: 12px; cursor: pointer; background: none; color: #64748b; }
         .sub-nav button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-        .stat-card { padding: 12px; border-radius: 12px; color: white; }
-        
-        label { display: block; font-size: 10px; font-weight: 700; color: #64748b; margin: 8px 0 2px; text-transform: uppercase; }
-        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 15px; background: #fcfcfd; }
-        
-        .action-btn { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; }
-        .btn-sm { border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        /* Record/List Styling */
+        .group-title { background: #e2e8f0; padding: 10px 14px; border-radius: 10px; font-weight: 800; font-size: 12px; margin: 15px 0 8px; display: flex; justify-content: space-between; }
+        .btn-sm { border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .btn-del { background: #fee2e2; color: var(--danger); }
         .btn-edit { background: #e0f2fe; color: var(--primary); }
-        
-        .group-title { background: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-weight: 800; font-size: 12px; margin: 15px 0 5px; display: flex; justify-content: space-between; }
-        
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #e2e8f0; }
-        .nav-item { border: none; background: none; color: #94a3b8; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-        .nav-item.active { color: var(--primary); font-weight: bold; }
+
+        /* ENLARGED BOTTOM NAVIGATION */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 95px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #e2e8f0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000; }
+        .nav-item { border: none; background: none; color: #94a3b8; font-size: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+        .nav-item span { font-size: 30px; } /* Large Icon Size */
+        .nav-item.active { color: var(--primary); font-weight: 800; }
+
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1 style="font-size: 18px; margin:0;">ELITE SHOP</h1>
+    <h1 style="font-size: 20px; margin:0; letter-spacing: -1px;">ELITE SHOP</h1>
     <div class="status-indicator">
-        <span id="sync-label">OFFLINE</span>
-        <div id="status-dot" class="dot"></div>
-        <button onclick="syncData()" style="background:none; border:none; font-size:16px; cursor:pointer;">🔄</button>
+        <span id="sync-label">SYSTEM LIVE</span>
+        <div class="dot"></div>
     </div>
 </div>
 
 <div class="container">
     <section id="dashboard">
         <div class="stat-grid">
-            <div class="stat-card" style="background: var(--primary);"><small>Today's Sales</small><br><strong id="dash-sales">$0</strong></div>
-            <div class="stat-card" style="background: var(--success);"><small>Today's Profit</small><br><strong id="dash-profit">$0</strong></div>
+            <div class="mini-stat" style="background: var(--primary);"><small>Today's Sales</small><br><strong id="dash-sales" style="font-size:22px;">$0</strong></div>
+            <div class="mini-stat" style="background: var(--success);"><small>Today's Profit</small><br><strong id="dash-profit" style="font-size:22px;">$0</strong></div>
         </div>
+
+        <div class="card" style="background: #1e293b; color: white;">
+            <h3 style="margin: 0 0 15px 0; color: var(--warning); font-size: 14px;">FINANCIAL OVERVIEW</h3>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span>Total Invested (Stock):</span> <span id="fin-invest" style="font-weight:bold;">$0</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span>Total Earned (Revenue):</span> <span id="fin-earn" style="font-weight:bold; color:var(--success)">$0</span>
+            </div>
+            <hr style="opacity:0.1; margin: 15px 0;">
+            <div style="display:flex; justify-content:space-between; align-items: center;">
+                <span style="font-size: 14px;">NET SHOP PROFIT:</span> <span id="fin-net" style="font-weight:900; font-size:22px; color:var(--success)">$0</span>
+            </div>
+        </div>
+
         <div class="card">
-            <label>Report Filter</label>
+            <label>Profit Report Filter</label>
             <div style="display:flex; gap:8px;"><input type="date" id="date-from"><input type="date" id="date-to"></div>
-            <button class="action-btn" style="margin-top:10px; padding:10px;" onclick="loadDashboard()">Filter Report</button>
-            <div style="display:flex; justify-content:space-between; margin-top:15px;"><span>Range Profit:</span> <span id="m-prof" style="font-weight:bold; color:var(--success)">$0</span></div>
+            <button class="action-btn" style="padding:12px; font-size:14px;" onclick="loadDashboard()">Calculate Profit</button>
+            <div style="display:flex; justify-content:space-between; margin-top:20px; font-size:18px;">
+                <span>Range Profit:</span> <span id="range-prof-val" style="font-weight:bold; color:var(--success)">$0</span>
+            </div>
+            <button class="action-btn" style="background:#1e293b; margin-top:15px; font-size:14px;" onclick="generatePDF()">📥 EXPORT PDF REPORT</button>
         </div>
     </section>
 
@@ -73,132 +95,192 @@
         <div class="card">
             <label>Date</label>
             <input type="date" id="sale-date">
+            
             <label>Category</label>
-            <select id="cat" onchange="toggleSaleForm()">
-                <option value="Accessories">Accessories</option>
+            <select id="cat" onchange="toggleFormType()">
+                <option value="Sale">Sale (Accessories/Phone)</option>
+                <option value="Repair">Repair / Service</option>
+                <option value="Pawn">Phone Pawn (Loan)</option>
                 <option value="Expense">Business Expense</option>
             </select>
-            <div id="form-stock-sale">
+
+            <div id="ui-sale">
                 <label>Item Name</label>
-                <input list="stock-list" id="sale-search" placeholder="Search V8, Brand..." onchange="fillPrice()">
+                <input list="stock-list" id="sale-search" placeholder="Search V8, Type-C, etc." onchange="autoFillPrice()">
                 <datalist id="stock-list"></datalist>
                 <div style="display:flex; gap:10px;">
-                    <input type="number" id="sale-qty" value="1" placeholder="Qty">
-                    <input type="number" id="sale-price" placeholder="Price">
+                    <div style="flex:1;"><label>Qty</label><input type="number" id="sale-qty" value="1"></div>
+                    <div style="flex:2;"><label>Price</label><input type="number" id="sale-price" placeholder="0.00"></div>
                 </div>
             </div>
-            <div id="form-expense-sale" class="hidden">
-                <input type="text" id="exp-name" placeholder="Reason (Rent, Bill...)">
-                <input type="number" id="exp-amount" placeholder="Amount">
+
+            <div id="ui-repair" class="hidden">
+                <label>Service Description</label>
+                <input type="text" id="rep-desc" placeholder="e.g. Screen Replacement">
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><label>Part Cost</label><input type="number" id="rep-cost" placeholder="0"></div>
+                    <div style="flex:1;"><label>Charge</label><input type="number" id="rep-charge" placeholder="0"></div>
+                </div>
             </div>
-            <button class="action-btn" onclick="handleSaveSale()">SAVE RECORD</button>
+
+            <div id="ui-pawn" class="hidden">
+                <label>Customer Name</label>
+                <input type="text" id="pawn-cust" placeholder="Client Name">
+                <label>Phone Model Pawned</label>
+                <input type="text" id="pawn-model" placeholder="e.g. iPhone 13">
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><label>Loan Amount</label><input type="number" id="pawn-loan" placeholder="0"></div>
+                    <div style="flex:1;"><label>Interest Earn</label><input type="number" id="pawn-interest" placeholder="0"></div>
+                </div>
+            </div>
+
+            <div id="ui-exp" class="hidden">
+                <label>Reason</label>
+                <input type="text" id="exp-name" placeholder="Rent, Electricity...">
+                <label>Amount</label>
+                <input type="number" id="exp-amount" placeholder="0">
+            </div>
+
+            <button class="action-btn" onclick="saveTransaction()">SAVE RECORD</button>
         </div>
     </section>
 
     <section id="inventory" class="hidden">
         <div class="sub-nav">
-            <button id="sub-btn-list" class="active" onclick="switchInvTab('list')">📦 AVAILABLE STOCK</button>
-            <button id="sub-btn-add" onclick="switchInvTab('add')">➕ ADD NEW STOCK</button>
+            <button id="sub-btn-list" class="active" onclick="switchInvMode('list')">📦 STOCK LIST</button>
+            <button id="sub-btn-add" onclick="switchInvMode('add')">➕ ADD NEW</button>
         </div>
 
-        <div id="inv-tab-list">
-            <input type="text" id="inv-search" placeholder="🔍 Search stock list..." onkeyup="renderStockList()">
+        <div id="inv-list-ui">
+            <input type="text" id="inv-search" placeholder="🔍 Search stock..." onkeyup="renderStockList()">
             <div id="stock-display-area"></div>
         </div>
 
-        <div id="inv-tab-add" class="hidden">
+        <div id="inv-add-ui" class="hidden">
             <div class="card">
-                <label>Plug / Tag Type</label>
+                <label>Plug / Tag</label>
                 <select id="inv-tag">
-                    <option value="V8 Android">V8 Android</option>
-                    <option value="Type-C">Type-C</option>
-                    <option value="iPhone">iPhone</option>
-                    <option value="Phone Device">Phone Device</option>
+                    <option>V8 Android</option>
+                    <option>Type-C</option>
+                    <option>iPhone</option>
+                    <option>Phone Device</option>
                 </select>
-                <input type="text" id="inv-name" placeholder="Brand Name (e.g. Samsung)">
+                <label>Brand/Model Name</label>
+                <input type="text" id="inv-name" placeholder="e.g. Samsung V8 Cable">
                 <div style="display:flex; gap:10px;">
-                    <input type="number" id="inv-buy" placeholder="Buy Cost">
-                    <input type="number" id="inv-sell" placeholder="Sell Price">
+                    <div style="flex:1;"><label>Buy Cost</label><input type="number" id="inv-buy"></div>
+                    <div style="flex:1;"><label>Sell Price</label><input type="number" id="inv-sell"></div>
                 </div>
-                <input type="number" id="inv-qty" placeholder="Quantity">
-                <button class="action-btn" onclick="saveNewStock()">CONFIRM ADD STOCK</button>
+                <label>Initial Qty</label>
+                <input type="number" id="inv-qty">
+                <button class="action-btn" onclick="addNewInventory()">ADD TO STOCK</button>
             </div>
         </div>
     </section>
 
     <section id="records" class="hidden">
-        <div id="report-list"></div>
+        <input type="text" id="rec-search" placeholder="🔍 Search records..." onkeyup="renderReports()" style="margin-bottom:15px;">
+        <div id="rec-list-area"></div>
     </section>
 </div>
 
 <nav class="bottom-nav">
-    <button class="nav-item active" id="btn-dash" onclick="showSection('dashboard')">🏠<br>Dash</button>
-    <button class="nav-item" id="btn-sale" onclick="showSection('sales-entry')">➕<br>Sale</button>
-    <button class="nav-item" id="btn-inv" onclick="showSection('inventory')">📦<br>Stocks</button>
-    <button class="nav-item" id="btn-rec" onclick="showSection('records')">📊<br>Report</button>
+    <button class="nav-item active" id="btn-dash" onclick="changeTab('dashboard')"><span>🏠</span>Dash</button>
+    <button class="nav-item" id="btn-sale" onclick="changeTab('sales-entry')"><span>➕</span>Sale</button>
+    <button class="nav-item" id="btn-inv" onclick="changeTab('inventory')"><span>📦</span>Stock</button>
+    <button class="nav-item" id="btn-rec" onclick="changeTab('records')"><span>📊</span>Report</button>
 </nav>
 
 <script>
-    const db = new Dexie("EliteShopProDB");
+    // 1. DATABASE SETUP
+    const db = new Dexie("EliteShopMasterFinal");
     db.version(1).stores({ 
-        records: '++id, date, item, sellPrice, buyPrice, category, qty',
-        inventory: '++id, name, tag, buyPrice, sellPrice, qty'
+        records: '++id, date, item, sell, buy, cat',
+        inventory: '++id, name, tag, buy, sell, qty'
     });
 
-    // NAVIGATION
-    function showSection(id) {
-        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.getElementById(id).classList.remove('hidden');
-        document.getElementById('btn-' + id.substring(0,3)).classList.add('active');
-        if(id === 'sales-entry') { document.getElementById('sale-date').value = new Date().toISOString().split('T')[0]; updateSaleDatalist(); }
-        if(id === 'inventory') renderStockList();
-        if(id === 'dashboard') loadDashboard();
-        if(id === 'records') loadReports();
+    // 2. HELPER FUNCTIONS
+    const getToday = () => new Date().toISOString().split('T')[0];
+
+    function toggleFormType() {
+        const type = document.getElementById('cat').value;
+        document.getElementById('ui-sale').classList.toggle('hidden', type !== 'Sale');
+        document.getElementById('ui-repair').classList.toggle('hidden', type !== 'Repair');
+        document.getElementById('ui-pawn').classList.toggle('hidden', type !== 'Pawn');
+        document.getElementById('ui-exp').classList.toggle('hidden', type !== 'Expense');
     }
 
-    function switchInvTab(tab) {
-        document.getElementById('inv-tab-list').classList.toggle('hidden', tab !== 'list');
-        document.getElementById('inv-tab-add').classList.toggle('hidden', tab !== 'add');
-        document.getElementById('sub-btn-list').classList.toggle('active', tab === 'list');
-        document.getElementById('sub-btn-add').classList.toggle('active', tab === 'add');
-        if(tab === 'list') renderStockList();
+    function switchInvMode(mode) {
+        document.getElementById('inv-list-ui').classList.toggle('hidden', mode !== 'list');
+        document.getElementById('inv-add-ui').classList.toggle('hidden', mode !== 'add');
+        document.getElementById('sub-btn-list').classList.toggle('active', mode === 'list');
+        document.getElementById('sub-btn-add').classList.toggle('active', mode === 'add');
+        if(mode === 'list') renderStockList();
     }
 
-    // STOCK LOGIC
-    async function saveNewStock() {
+    // 3. CORE LOGIC - SALES & TRANSACTIONS
+    async function saveTransaction() {
+        const type = document.getElementById('cat').value;
+        const date = document.getElementById('sale-date').value;
+        let data = { date, cat: type };
+
+        if(type === 'Sale') {
+            const fullName = document.getElementById('sale-search').value;
+            const qty = parseInt(document.getElementById('sale-qty').value) || 1;
+            const item = await db.inventory.where('name').equals(fullName.split(' [')[0]).first();
+            data.item = fullName;
+            data.sell = parseFloat(document.getElementById('sale-price').value) || 0;
+            data.buy = (item ? item.buy : 0) * qty;
+            if(item) await db.inventory.update(item.id, { qty: item.qty - qty });
+        } else if(type === 'Repair') {
+            data.item = "REPAIR: " + document.getElementById('rep-desc').value;
+            data.sell = parseFloat(document.getElementById('rep-charge').value) || 0;
+            data.buy = parseFloat(document.getElementById('rep-cost').value) || 0;
+        } else if(type === 'Pawn') {
+            data.item = "PAWN: " + document.getElementById('pawn-cust').value + " ("+document.getElementById('pawn-model').value+")";
+            data.sell = parseFloat(document.getElementById('pawn-interest').value) || 0;
+            data.buy = 0; // Loan is not a cost of sale
+        } else {
+            data.item = "EXPENSE: " + document.getElementById('exp-name').value;
+            data.sell = 0;
+            data.buy = parseFloat(document.getElementById('exp-amount').value) || 0;
+        }
+
+        await db.records.add(data);
+        alert("Record Saved!");
+        changeTab('dashboard');
+    }
+
+    // 4. INVENTORY LOGIC
+    async function addNewInventory() {
         await db.inventory.add({
             tag: document.getElementById('inv-tag').value,
             name: document.getElementById('inv-name').value,
-            buyPrice: parseFloat(document.getElementById('inv-buy').value) || 0,
-            sellPrice: parseFloat(document.getElementById('inv-sell').value) || 0,
+            buy: parseFloat(document.getElementById('inv-buy').value) || 0,
+            sell: parseFloat(document.getElementById('inv-sell').value) || 0,
             qty: parseInt(document.getElementById('inv-qty').value) || 0
         });
         alert("Stock Added!");
-        switchInvTab('list');
+        switchInvMode('list');
     }
 
     async function renderStockList() {
-        const search = document.getElementById('inv-search').value.toLowerCase();
+        const query = document.getElementById('inv-search').value.toLowerCase();
         let items = await db.inventory.toArray();
-        if(search) items = items.filter(i => i.name.toLowerCase().includes(search) || i.tag.toLowerCase().includes(search));
+        if(query) items = items.filter(i => i.name.toLowerCase().includes(query) || i.tag.toLowerCase().includes(query));
 
         const groups = {};
-        items.forEach(i => {
-            if(!groups[i.tag]) groups[i.tag] = { total: 0, items: [] };
-            groups[i.tag].total += i.qty;
-            groups[i.tag].items.push(i);
-        });
+        items.forEach(i => { if(!groups[i.tag]) groups[i.tag] = []; groups[i.tag].push(i); });
 
         let html = '';
         for(let tag in groups) {
-            html += `<div class="group-title"><span>${tag}</span> <span>Total: ${groups[tag].total}</span></div>`;
-            groups[tag].items.forEach(i => {
-                html += `<div class="card" style="margin-bottom:6px;">
-                    <div style="display:flex; justify-content:space-between"><b>${i.name}</b> <span>${i.qty} Left</span></div>
-                    <div style="display:flex; gap:10px; margin-top:8px;">
-                        <button onclick="editInv(${i.id}, ${i.qty})" class="btn-sm btn-edit">Update Qty</button>
-                        <button onclick="deleteInv(${i.id})" class="btn-sm btn-del">Delete</button>
+            html += `<div class="group-title"><span>${tag}</span> <span>${groups[tag].length} Items</span></div>`;
+            groups[tag].forEach(i => {
+                html += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div><b style="font-size:16px;">${i.name}</b><br><small>Stock: ${i.qty} | Sell: $${i.sell}</small></div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="editQty(${i.id}, ${i.qty})" class="btn-sm btn-edit">Edit</button>
+                        <button onclick="deleteStock(${i.id})" class="btn-sm btn-del">Del</button>
                     </div>
                 </div>`;
             });
@@ -206,58 +288,98 @@
         document.getElementById('stock-display-area').innerHTML = html;
     }
 
-    async function editInv(id, old) { const n = prompt("New Quantity:", old); if(n) { await db.inventory.update(id, {qty: parseInt(n)}); renderStockList(); } }
-    async function deleteInv(id) { if(confirm("Delete this product?")) { await db.inventory.delete(id); renderStockList(); } }
+    async function editQty(id, old) { const n = prompt("New Qty:", old); if(n) { await db.inventory.update(id, {qty: parseInt(n)}); renderStockList(); } }
+    async function deleteStock(id) { if(confirm("Delete item?")) { await db.inventory.delete(id); renderStockList(); } }
 
-    // SALES LOGIC
-    function toggleSaleForm() {
-        const isExp = document.getElementById('cat').value === 'Expense';
-        document.getElementById('form-stock-sale').classList.toggle('hidden', isExp);
-        document.getElementById('form-expense-sale').classList.toggle('hidden', !isExp);
+    // 5. DASHBOARD & FINANCE
+    async function loadDashboard() {
+        const today = getToday();
+        const allRecs = await db.records.toArray();
+        const allInv = await db.inventory.toArray();
+
+        let dSales = 0, dProf = 0, totalEarned = 0, totalCogs = 0, totalInvested = 0;
+
+        allRecs.forEach(r => {
+            if(r.date === today) { dSales += r.sell; dProf += (r.sell - r.buy); }
+            totalEarned += r.sell;
+            totalCogs += r.buy;
+        });
+
+        allInv.forEach(i => { totalInvested += (i.buy * i.qty); });
+
+        document.getElementById('dash-sales').innerText = `$${dSales.toFixed(2)}`;
+        document.getElementById('dash-profit').innerText = `$${dProf.toFixed(2)}`;
+        document.getElementById('fin-invest').innerText = `$${totalInvested.toFixed(2)}`;
+        document.getElementById('fin-earn').innerText = `$${totalEarned.toFixed(2)}`;
+        document.getElementById('fin-net').innerText = `$${(totalEarned - totalCogs).toFixed(2)}`;
+
+        // Range Filter
+        const from = document.getElementById('date-from').value;
+        const to = document.getElementById('date-to').value;
+        if(from && to) {
+            let rProf = 0;
+            allRecs.filter(r => r.date >= from && r.date <= to).forEach(r => rProf += (r.sell - r.buy));
+            document.getElementById('range-prof-val').innerText = `$${rProf.toFixed(2)}`;
+        }
     }
 
-    async function updateSaleDatalist() {
-        const items = await db.inventory.toArray();
-        document.getElementById('stock-list').innerHTML = items.map(i => `<option value="${i.name} [${i.tag}]">`).join('');
+    // 6. REPORTS LOGIC
+    async function renderReports() {
+        const query = document.getElementById('rec-search').value.toLowerCase();
+        let recs = await db.records.toArray();
+        if(query) recs = recs.filter(r => r.item.toLowerCase().includes(query));
+
+        document.getElementById('rec-list-area').innerHTML = recs.reverse().map(r => `
+            <div class="card" style="border-left: 5px solid ${r.sell > 0 ? 'var(--success)' : 'var(--danger)'}">
+                <div style="display:flex; justify-content:space-between"><b>${r.item}</b> <strong>$${r.sell || r.buy}</strong></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                    <small>${r.date} | ${r.cat}</small>
+                    <button onclick="deleteRecord(${r.id})" style="color:red; background:none; border:none; font-size:12px;">Delete</button>
+                </div>
+            </div>
+        `).join('');
     }
 
-    async function fillPrice() {
+    async function deleteRecord(id) { if(confirm("Remove record?")) { await db.records.delete(id); renderReports(); loadDashboard(); } }
+
+    async function generatePDF() {
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        doc.text("ELITE SHOP REPORT", 20, 20);
+        doc.text("Generated: " + getToday(), 20, 30);
+        doc.text("Net Shop Profit: " + document.getElementById('fin-net').innerText, 20, 40);
+        doc.save("EliteShop_Report.pdf");
+    }
+
+    // 7. APP NAVIGATION
+    function changeTab(id) {
+        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.remove('hidden');
+        document.getElementById('btn-' + id.substring(0,3)).classList.add('active');
+
+        // Reset/Default Dates
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(i => { if(!i.value) i.value = getToday(); });
+
+        if(id === 'sales-entry') {
+            document.getElementById('sale-date').value = getToday();
+            db.inventory.toArray().then(items => {
+                document.getElementById('stock-list').innerHTML = items.map(i => `<option value="${i.name} [${i.tag}]">`).join('');
+            });
+        }
+        if(id === 'dashboard') loadDashboard();
+        if(id === 'inventory') switchInvMode('list');
+        if(id === 'records') renderReports();
+    }
+
+    async function autoFillPrice() {
         const name = document.getElementById('sale-search').value.split(' [')[0];
         const item = await db.inventory.where('name').equals(name).first();
-        if(item) document.getElementById('sale-price').value = item.sellPrice;
+        if(item) document.getElementById('sale-price').value = item.sell;
     }
 
-    async function handleSaveSale() {
-        const cat = document.getElementById('cat').value;
-        const rec = { date: document.getElementById('sale-date').value, category: cat };
-        
-        if(cat === 'Expense') {
-            rec.item = "EXP: " + document.getElementById('exp-name').value;
-            rec.buyPrice = parseFloat(document.getElementById('exp-amount').value);
-            rec.sellPrice = 0;
-        } else {
-            const name = document.getElementById('sale-search').value.split(' [')[0];
-            const item = await db.inventory.where('name').equals(name).first();
-            rec.item = document.getElementById('sale-search').value;
-            rec.qty = parseInt(document.getElementById('sale-qty').value);
-            rec.sellPrice = parseFloat(document.getElementById('sale-price').value);
-            rec.buyPrice = (item ? item.buyPrice : 0) * rec.qty;
-            if(item) await db.inventory.update(item.id, { qty: item.qty - rec.qty });
-        }
-        await db.records.add(rec);
-        alert("Saved!"); showSection('dashboard');
-    }
-
-    async function loadDashboard() {
-        const today = new Date().toISOString().split('T')[0];
-        const all = await db.records.toArray();
-        let sales = 0, prof = 0;
-        all.forEach(r => { if(r.date === today) { sales += r.sellPrice; prof += (r.sellPrice - r.buyPrice); } });
-        document.getElementById('dash-sales').innerText = `$${sales.toFixed(2)}`;
-        document.getElementById('dash-profit').innerText = `$${prof.toFixed(2)}`;
-    }
-
-    showSection('dashboard');
+    // Initialize
+    changeTab('dashboard');
 </script>
 </body>
 </html>
