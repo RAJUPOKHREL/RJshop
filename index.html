@@ -16,6 +16,7 @@
             --success: #10b981; 
             --danger: #ef4444; 
             --warning: #f59e0b; 
+            --syncing: #3b82f6;
             --dark: #1e293b;
             --text-main: #1e293b;
             --text-sub: #64748b;
@@ -60,6 +61,7 @@
             width: 14px; height: 14px; border-radius: 50%; 
             background: var(--success); 
             box-shadow: 0 0 8px var(--success); 
+            transition: all 0.3s ease;
         }
 
         .container { padding: 15px; max-width: 600px; margin: auto; }
@@ -331,8 +333,8 @@
        ------------------------------------------------------------------- */
     async function syncToCloud() {
         const dot = document.getElementById('sync-dot');
-        dot.style.background = 'var(--warning)';
-        dot.style.boxShadow = '0 0 8px var(--warning)';
+        dot.style.background = 'var(--syncing)';
+        dot.style.boxShadow = '0 0 10px var(--syncing)';
         
         try {
             const records = await db.records.toArray();
@@ -413,8 +415,12 @@
 
         if(!entry.name) { alert("Please provide a product name."); return; }
 
+        // Start Blue Dot Sync immediately for faster feedback
+        const dot = document.getElementById('sync-dot');
+        dot.style.background = 'var(--syncing)';
+        dot.style.boxShadow = '0 0 10px var(--syncing)';
+
         await db.inventory.add(entry);
-        await syncToCloud();
         
         // RESET FORM Logic
         document.getElementById('add-item-name').value = "";
@@ -424,8 +430,8 @@
         document.getElementById('add-custom-cat-input').value = "";
         document.getElementById('add-phone-specs').value = "";
         
-        alert("Stock Added & Form Cleared.");
-        switchInventorySubTab(type === 'Accessory' ? 'acc' : 'phone');
+        // REMOVED ALERT & TAB SWITCH: This keeps user on same page and is much faster
+        await syncToCloud();
     }
 
     async function switchInventorySubTab(tab) {
