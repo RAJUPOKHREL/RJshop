@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elite Shop Manager Pro - Version 7.0 (Total Expansion)</title>
+    <title>Elite Shop Manager Pro - V7.6</title>
     
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -16,120 +16,77 @@
             --success: #10b981; 
             --danger: #ef4444; 
             --warning: #f59e0b; 
+            --syncing: #3b82f6; 
             --dark: #1e293b;
             --text-main: #1e293b;
             --text-sub: #64748b;
         }
 
         body { 
-            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            margin: 0; 
-            background: var(--bg); 
-            padding-bottom: 110px; 
-            color: var(--text-main);
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; background: var(--bg); padding-bottom: 110px; color: var(--text-main);
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- HEADER STYLING --- */
+        /* HEADER & SYNC DOT */
         .header { 
-            padding: 15px 20px; 
-            background: #ffffff; 
-            border-bottom: 1px solid #e2e8f0; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            position: sticky; 
-            top: 0; 
-            z-index: 1000;
+            padding: 15px 20px; background: #ffffff; border-bottom: 1px solid #e2e8f0; 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: sticky; top: 0; z-index: 1000;
         }
 
         .sync-btn { 
-            background: var(--dark); 
-            color: white; 
-            border: none; 
-            padding: 10px 18px; 
-            border-radius: 12px; 
-            font-size: 11px; 
-            font-weight: 900; 
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            background: var(--dark); color: white; border: none; padding: 10px 18px; 
+            border-radius: 12px; font-size: 11px; font-weight: 900; cursor: pointer; text-transform: uppercase;
         }
 
         .status-dot { 
-            width: 14px; height: 14px; border-radius: 50%; 
+            width: 16px; height: 16px; border-radius: 50%; 
             background: var(--success); 
-            box-shadow: 0 0 8px var(--success); 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            transition: all 0.4s ease;
         }
 
         .container { padding: 15px; max-width: 600px; margin: auto; }
         
-        /* --- CARD & COMPONENT STYLING --- */
+        /* DASHBOARD CARDS */
         .card { 
-            background: var(--card); 
-            padding: 22px; 
-            border-radius: 22px; 
-            margin-bottom: 18px; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.04); 
-            border: 1px solid #f1f5f9; 
-            position: relative;
+            background: var(--card); padding: 22px; border-radius: 22px; margin-bottom: 18px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; position: relative;
         }
 
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .mini-stat { padding: 22px; border-radius: 22px; color: white; }
-        .mini-stat small { font-size: 11px; text-transform: uppercase; font-weight: 800; opacity: 0.85; letter-spacing: 0.5px; }
+        .mini-stat small { font-size: 11px; text-transform: uppercase; font-weight: 800; opacity: 0.85; }
         .mini-stat strong { font-size: 26px; display: block; margin-top: 8px; font-weight: 900; }
 
         label { display: block; font-size: 11px; font-weight: 900; color: var(--text-sub); margin: 15px 0 8px; text-transform: uppercase; letter-spacing: 0.8px; }
         
-        input, select, textarea { 
-            width: 100%; padding: 16px; margin-bottom: 12px; 
-            border: 2px solid #f1f5f9; border-radius: 16px; 
-            font-size: 16px; box-sizing: border-box; background: #fcfcfd; 
-            transition: all 0.2s ease;
+        input, select { 
+            width: 100%; padding: 16px; margin-bottom: 12px; border: 2px solid #f1f5f9; 
+            border-radius: 16px; font-size: 16px; box-sizing: border-box; background: #fcfcfd; 
         }
-        input:focus { border-color: var(--primary); outline: none; background: #fff; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
 
         .action-btn { 
-            background: var(--primary); color: white; border: none; 
-            width: 100%; padding: 20px; border-radius: 18px; 
-            font-weight: 900; cursor: pointer; font-size: 16px; margin-top: 15px;
+            background: var(--primary); color: white; border: none; width: 100%; padding: 20px; 
+            border-radius: 18px; font-weight: 900; cursor: pointer; font-size: 16px; margin-top: 15px;
             box-shadow: 0 6px 15px rgba(37, 99, 235, 0.25);
-            transition: transform 0.1s;
         }
-        .action-btn:active { transform: scale(0.98); }
 
-        /* --- NAVIGATION STYLING --- */
-        .sub-nav { 
-            display: flex; gap: 10px; margin-bottom: 20px; 
-            background: #e2e8f0; padding: 8px; border-radius: 18px; 
-            overflow-x: auto;
-        }
-        .sub-nav button { 
-            flex: 1; border: none; padding: 14px; border-radius: 12px; 
-            font-weight: 800; font-size: 12px; cursor: pointer; background: none; color: #64748b; 
-            white-space: nowrap; transition: 0.2s;
-        }
+        /* NAVIGATION */
+        .sub-nav { display: flex; gap: 10px; margin-bottom: 20px; background: #e2e8f0; padding: 8px; border-radius: 18px; overflow-x: auto; }
+        .sub-nav button { flex: 1; border: none; padding: 14px; border-radius: 12px; font-weight: 800; font-size: 12px; cursor: pointer; background: none; color: #64748b; white-space: nowrap; }
         .sub-nav button.active { background: white; color: var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
-        .bottom-nav { 
-            position: fixed; bottom: 0; left: 0; right: 0; height: 100px; 
-            background: white; display: flex; justify-content: space-around; 
-            align-items: center; border-top: 1px solid #e2e8f0; z-index: 1000;
-        }
-        .nav-item { 
-            border: none; background: none; color: #94a3b8; font-size: 12px; 
-            cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; 
-        }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 100px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #e2e8f0; z-index: 1000; }
+        .nav-item { border: none; background: none; color: #94a3b8; font-size: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
         .nav-item span { font-size: 32px; }
         .nav-item.active { color: var(--primary); font-weight: 900; }
 
-        /* --- UI UTILITIES --- */
         .hidden { display: none !important; }
         .badge { padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; text-transform: uppercase; }
-        .report-summary-card { background: #f8fafc; border-left: 6px solid var(--primary); padding: 20px; border-radius: 16px; margin-bottom: 20px; }
         
-        /* --- CRUD BUTTONS --- */
+        /* CRUD BUTTONS */
         .control-panel { display: flex; gap: 12px; margin-top: 15px; border-top: 1.5px solid #f1f5f9; padding-top: 15px; }
         .btn-edit { flex: 1; background: #eff6ff; color: var(--primary); border: none; padding: 10px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer; }
         .btn-delete { flex: 1; background: #fef2f2; color: var(--danger); border: none; padding: 10px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer; }
@@ -149,534 +106,311 @@
     
     <section id="dashboard">
         <div class="stat-grid">
-            <div class="mini-stat" style="background: var(--primary);">
-                <small>Today's Sales</small>
-                <strong id="dash-sales">$0.00</strong>
-            </div>
-            <div class="mini-stat" style="background: var(--success);">
-                <small>Today's Profit</small>
-                <strong id="dash-profit">$0.00</strong>
-            </div>
+            <div class="mini-stat" style="background: var(--primary);"><small>Today's Sales</small><strong id="dash-sales">$0.00</strong></div>
+            <div class="mini-stat" style="background: var(--success);"><small>Today's Profit</small><strong id="dash-profit">$0.00</strong></div>
         </div>
-
         <div class="card" style="background: var(--dark); color: white;">
-            <h3 style="margin: 0 0 18px 0; color: var(--warning); font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Shop Financial Overview</h3>
-            <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                <span style="opacity:0.8">Inventory Value:</span> <span id="fin-invest" style="font-weight:700">$0.00</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                <span style="opacity:0.8">Total Revenue:</span> <span id="fin-earn" style="color:var(--success); font-weight:700">$0.00</span>
-            </div>
+            <h3 style="margin: 0 0 18px 0; color: var(--warning); font-size: 14px; text-transform: uppercase;">Financial Overview</h3>
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>Inventory Value:</span> <span id="fin-invest">$0.00</span></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>Total Revenue:</span> <span id="fin-earn" style="color:var(--success)">$0.00</span></div>
             <hr style="opacity:0.15; margin: 18px 0;">
-            <div style="display:flex; justify-content:space-between; align-items: center;">
-                <span style="font-weight:700; font-size: 15px;">TOTAL NET PROFIT:</span> 
-                <span id="fin-net" style="font-weight:950; font-size:28px; color:var(--success)">$0.00</span>
-            </div>
+            <div style="display:flex; justify-content:space-between; align-items: center;"><span>NET PROFIT:</span> <span id="fin-net" style="font-weight:950; font-size:28px; color:var(--success)">$0.00</span></div>
         </div>
-        
-        <button class="action-btn" style="background: white; color: var(--dark); border: 2px solid #e2e8f0;" onclick="generatePDF()">📥 GENERATE BUSINESS REPORT (PDF)</button>
+        <button class="action-btn" style="background: white; color: var(--dark); border: 2px solid #e2e8f0;" onclick="generatePDF()">📥 EXPORT PDF REPORT</button>
     </section>
 
     <section id="sales-entry" class="hidden">
         <div class="card">
-            <label>Transaction Date</label>
-            <input type="date" id="sale-date">
-            
-            <label>Transaction Category</label>
-            <select id="sale-cat" onchange="updateEntryUIVisibility()">
-                <option value="Accessory">Product/Stock Sale</option>
+            <label>Date</label><input type="date" id="sale-date">
+            <label>Category</label>
+            <select id="sale-cat" onchange="updateUI()">
+                <option value="Accessory">Product Sale</option>
                 <option value="Phone">Phone Sale</option>
-                <option value="Repair">Repair / Service</option>
-                <option value="Pawn">Pawn Entry</option>
-                <option value="Expense">Expense / Bill</option>
+                <option value="Repair">Repair</option>
+                <option value="Pawn">Pawn</option>
+                <option value="Expense">Expense</option>
             </select>
-
             <div id="ui-standard">
-                <label>Find Item in Stock</label>
-                <input list="stock-datalist" id="sale-item-name" onchange="handleSaleAutoFill()" placeholder="Search product name...">
+                <label>Item Name</label><input list="stock-datalist" id="sale-item-name" onchange="autoFill()" placeholder="Search...">
                 <datalist id="stock-datalist"></datalist>
                 <div style="display:flex; gap:12px;">
-                    <div style="flex:1;"><label>Quantity</label><input type="number" id="sale-qty" value="1"></div>
-                    <div style="flex:2;"><label>Selling Price</label><input type="number" id="sale-price"></div>
+                    <div style="flex:1;"><label>Qty</label><input type="number" id="sale-qty" value="1"></div>
+                    <div style="flex:2;"><label>Price</label><input type="number" id="sale-price"></div>
                 </div>
             </div>
-
             <div id="ui-repair" class="hidden">
-                <label>Repair Details</label>
-                <input type="text" id="rep-desc" placeholder="Device Model & Fault">
-                <div style="display:flex; gap:12px;">
-                    <div style="flex:1;"><label>Parts Cost</label><input type="number" id="rep-cost" placeholder="0.00"></div>
-                    <div style="flex:1;"><label>Price Charged</label><input type="number" id="rep-charge" placeholder="0.00"></div>
-                </div>
+                <label>Repair Info</label><input type="text" id="rep-desc" placeholder="Model & Issue">
+                <div style="display:flex; gap:12px;"><input type="number" id="rep-cost" placeholder="Part Cost"><input type="number" id="rep-charge" placeholder="Service Fee"></div>
             </div>
-
             <div id="ui-pawn" class="hidden">
-                <label>Pawn Item / Customer Name</label>
-                <input type="text" id="pawn-info" placeholder="Name - Model - ID">
-                <div style="display:flex; gap:12px;">
-                    <div style="flex:1;"><label>Loan Amount</label><input type="number" id="pawn-loan" placeholder="0.00"></div>
-                    <div style="flex:1;"><label>Interest Fee</label><input type="number" id="pawn-interest" placeholder="0.00"></div>
-                </div>
+                <label>Pawn Info</label><input type="text" id="pawn-info" placeholder="Name - Model">
+                <div style="display:flex; gap:12px;"><input type="number" id="pawn-loan" placeholder="Loan Amount"><input type="number" id="pawn-interest" placeholder="Interest Fee"></div>
             </div>
-
             <div id="ui-expense" class="hidden">
-                <label>Expense Category / Reason</label>
-                <input type="text" id="exp-name" placeholder="Rent, Electricity, Food, etc.">
-                <label>Total Amount Paid</label>
-                <input type="number" id="exp-amount" placeholder="0.00">
+                <label>Reason</label><input type="text" id="exp-name"><label>Amount</label><input type="number" id="exp-amount">
             </div>
-
-            <button class="action-btn" onclick="processTransaction()">SAVE TRANSACTION</button>
+            <button class="action-btn" onclick="saveSale()">SAVE TRANSACTION</button>
         </div>
     </section>
 
     <section id="inventory" class="hidden">
         <div class="sub-nav">
-            <button id="inv-tab-acc" class="active" onclick="switchInventorySubTab('acc')">STOCKS</button>
-            <button id="inv-tab-phone" onclick="switchInventorySubTab('phone')">PHONES</button>
-            <button id="inv-tab-pawn" onclick="switchInventorySubTab('pawn')">PAWNS</button>
-            <button id="inv-tab-add" onclick="switchInventorySubTab('add')">+ NEW ENTRY</button>
+            <button id="inv-tab-acc" class="active" onclick="switchInv('acc')">STOCKS</button>
+            <button id="inv-tab-phone" onclick="switchInv('phone')">PHONES</button>
+            <button id="inv-tab-pawn" onclick="switchInv('pawn')">PAWNS</button>
+            <button id="inv-tab-add" onclick="switchInv('add')">+ NEW</button>
         </div>
-
         <div id="inv-list-container">
-            <input type="text" id="inv-search-box" placeholder="🔍 Search stock items..." onkeyup="refreshInventoryDisplay()">
-            <div id="inv-render-target"></div>
+            <input type="text" id="inv-search" placeholder="Search..." onkeyup="renderInv()">
+            <div id="inv-render"></div>
         </div>
-
         <div id="inv-add-container" class="hidden">
             <div class="card">
-                <label>Item Category Type</label>
-                <select id="add-main-type" onchange="updateAddStockUIVisibility()">
-                    <option value="Accessory">Accessory / General Product</option>
-                    <option value="Phone">Smartphone / Tablet</option>
-                </select>
-
-                <div id="add-form-accessory">
-                    <label>Sub-Type / Brand</label>
-                    <select id="add-sub-select" onchange="handleCustomCategoryToggle()">
-                        <option>V8 Cable</option>
-                        <option>Type-C Cable</option>
-                        <option>Earphone</option>
-                        <option>Airpods</option>
-                        <option>Charger</option>
-                        <option value="CUSTOM">-- WRITE CUSTOM CATEGORY --</option>
-                    </select>
-                    <input type="text" id="add-custom-cat-input" class="hidden" placeholder="Enter custom category name...">
+                <label>Type</label><select id="add-type" onchange="updateAddUI()"><option value="Accessory">Accessory</option><option value="Phone">Phone</option></select>
+                <div id="add-acc-fields">
+                    <label>Sub-Type</label><select id="add-sub" onchange="checkCustom()"><option>V8 Cable</option><option>Type-C</option><option>Earphone</option><option>Airpods</option><option value="CUSTOM">-- CUSTOM --</option></select>
+                    <input type="text" id="add-custom" class="hidden" placeholder="Enter Category">
                 </div>
-
-                <div id="add-form-phone" class="hidden">
-                    <label>Device Condition</label>
-                    <select id="add-phone-condition">
-                        <option>Brand New</option>
-                        <option>Second Hand</option>
-                        <option>Refurbished</option>
-                    </select>
-                    <label>Hardware Specifications</label>
-                    <input type="text" id="add-phone-specs" placeholder="e.g. 8GB/256GB - Blue">
+                <div id="add-phone-fields" class="hidden">
+                    <label>Condition</label><select id="add-cond"><option>Brand New</option><option>Second Hand</option></select>
+                    <label>Specs (RAM/ROM)</label><input type="text" id="add-specs">
                 </div>
-
-                <label>Full Product Name</label>
-                <input type="text" id="add-item-name">
-                
-                <div style="display:flex; gap:12px;">
-                    <div style="flex:1;"><label>Buy Price</label><input type="number" id="add-buy-price" placeholder="0.00"></div>
-                    <div style="flex:1;"><label>Sell Price</label><input type="number" id="add-sell-price" placeholder="0.00"></div>
-                </div>
-                
-                <label>Starting Quantity</label>
-                <input type="number" id="add-stock-qty" value="1">
-
-                <button class="action-btn" onclick="saveNewStockItem()">ADD TO INVENTORY</button>
+                <label>Product Name</label><input type="text" id="add-name">
+                <div style="display:flex; gap:12px;"><div><label>Buy</label><input type="number" id="add-buy"></div><div><label>Sell</label><input type="number" id="add-sell"></div></div>
+                <label>Qty</label><input type="number" id="add-qty" value="1">
+                <button class="action-btn" onclick="saveStock()">ADD TO INVENTORY</button>
             </div>
         </div>
     </section>
 
     <section id="records" class="hidden">
         <div class="sub-nav">
-            <button id="rep-all-btn" class="active" onclick="refreshReportDisplay('All')">ALL RECORDS</button>
-            <button onclick="refreshReportDisplay('Accessory')">STOCKS</button>
-            <button onclick="refreshReportDisplay('Phone')">PHONES</button>
-            <button onclick="refreshReportDisplay('Repair')">REPAIR</button>
-            <button onclick="refreshReportDisplay('Expense')">EXPENSES</button>
+            <button onclick="renderReport('All')">ALL</button>
+            <button onclick="renderReport('Accessory')">STOCKS</button>
+            <button onclick="renderReport('Phone')">PHONES</button>
+            <button onclick="renderReport('Repair')">REPAIR</button>
         </div>
-
-        <div id="report-financial-summary" class="report-summary-card"></div>
-        <div id="report-items-list"></div>
+        <div id="report-sum" class="card" style="background:#f8fafc; border-left:6px solid var(--primary)"></div>
+        <div id="report-list"></div>
     </section>
 </div>
 
 <nav class="bottom-nav">
-    <button class="nav-item active" id="btn-das" onclick="changeGlobalTab('dashboard')"><span>🏠</span>Dash</button>
-    <button class="nav-item" id="btn-sal" onclick="changeGlobalTab('sales-entry')"><span>➕</span>Sale</button>
-    <button class="nav-item" id="btn-inv" onclick="changeGlobalTab('inventory')"><span>📦</span>Stock</button>
-    <button class="nav-item" id="btn-rec" onclick="changeGlobalTab('records')"><span>📊</span>Report</button>
+    <button class="nav-item active" id="btn-das" onclick="changeTab('dashboard')"><span>🏠</span>Dash</button>
+    <button class="nav-item" id="btn-sal" onclick="changeTab('sales-entry')"><span>➕</span>Sale</button>
+    <button class="nav-item" id="btn-inv" onclick="changeTab('inventory')"><span>📦</span>Stock</button>
+    <button class="nav-item" id="btn-rec" onclick="changeTab('records')"><span>📊</span>Report</button>
 </nav>
 
 <script>
-    /* -------------------------------------------------------------------
-       1. CORE CONFIGURATION & DATABASE
-       ------------------------------------------------------------------- */
-    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwdKHtI0gT9gcfrH74uh6-CqAzezEEUxsanQIxuJKeG00bQVfVxGfb5EuZf6qT3WhCN/exec";
-    const db = new Dexie("EliteShop_Pro_V7_TotalExpansion");
+    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwdKHtI0gT9gcfrH74uh6-CqAzezEEUxsanQIxuJKeG00bQVfVxGfb5EuZf6qT3WhCN/exec"; 
     
+    const db = new Dexie("EliteShop_Pro_V7_Restore");
     db.version(1).stores({ 
-        records: '++id, date, cat, item, buy, sell, status',
-        inventory: '++id, type, sub, name, buy, sell, qty, specs, cond'
+        records: '++id, date, cat, item, buy, sell, status', 
+        inventory: '++id, type, sub, name, buy, sell, qty, specs, cond' 
     });
 
-    const getFormattedToday = () => new Date().toISOString().split('T')[0];
-
-    /* -------------------------------------------------------------------
-       2. CLOUD SYNCHRONIZATION
-       ------------------------------------------------------------------- */
+    // --- SYNC ENGINE (FIXED DATA LOADING) ---
     async function syncToCloud() {
         const dot = document.getElementById('sync-dot');
-        dot.style.background = 'var(--warning)';
-        dot.style.boxShadow = '0 0 8px var(--warning)';
+        dot.style.background = 'var(--syncing)';
+        dot.style.boxShadow = '0 0 15px var(--syncing)';
         
         try {
-            const records = await db.records.toArray();
+            const records = await db.records.toArray(); 
             const inventory = await db.inventory.toArray();
-            const payload = [[JSON.stringify({ records, inventory })]];
+            
+            // Fixed payload: Single object, no double brackets
+            const payload = JSON.stringify({ records, inventory });
             
             await fetch(CLOUD_URL, { 
                 method: 'POST', 
-                body: JSON.stringify(payload) 
+                mode: 'no-cors', // Essential for mobile
+                headers: { 'Content-Type': 'text/plain' },
+                body: payload 
             });
-            
-            dot.style.background = 'var(--success)';
-            dot.style.boxShadow = '0 0 8px var(--success)';
-        } catch(e) {
-            console.error("Sync Error:", e);
-            dot.style.background = 'var(--danger)';
+
+            // Blue dot stays for 5 seconds as requested
+            setTimeout(() => {
+                dot.style.background = 'var(--success)';
+                dot.style.boxShadow = '0 0 8px var(--success)';
+            }, 5000);
+
+        } catch(e) { 
+            console.error(e);
+            dot.style.background = 'var(--danger)'; 
         }
     }
 
     async function syncFromCloud() {
-        if(!confirm("Pull cloud data? This will overwrite your current local entries.")) return;
+        if(!confirm("Pull data from cloud?")) return;
         try {
-            const response = await fetch(CLOUD_URL);
-            const data = await response.json();
-            if(data && data[0][0]) {
-                const parsed = JSON.parse(data[0][0]);
-                await db.records.clear();
-                await db.inventory.clear();
-                await db.records.bulkAdd(parsed.records);
-                await db.inventory.bulkAdd(parsed.inventory);
+            const r = await fetch(CLOUD_URL); 
+            const d = await r.json();
+            // Checking if data exists in Cell A1
+            if(d && d[0] && d[0][0]) {
+                const p = JSON.parse(d[0][0]); 
+                await db.records.clear(); await db.inventory.clear();
+                await db.records.bulkAdd(p.records); await db.inventory.bulkAdd(p.inventory); 
                 location.reload();
             }
-        } catch(e) {
-            alert("Connection error. Check your Script URL.");
-        }
+        } catch(e) { alert("Sync failed. Ensure Google Sheet has data."); }
     }
 
-    /* -------------------------------------------------------------------
-       3. UI VISIBILITY CONTROLS
-       ------------------------------------------------------------------- */
-    function updateEntryUIVisibility() {
-        const cat = document.getElementById('sale-cat').value;
-        document.getElementById('ui-standard').className = (cat === 'Accessory' || cat === 'Phone') ? '' : 'hidden';
-        document.getElementById('ui-repair').className = (cat === 'Repair') ? '' : 'hidden';
-        document.getElementById('ui-pawn').className = (cat === 'Pawn') ? '' : 'hidden';
-        document.getElementById('ui-expense').className = (cat === 'Expense') ? '' : 'hidden';
+    // --- LOGIC FUNCTIONS ---
+    function updateUI() {
+        const c = document.getElementById('sale-cat').value;
+        document.getElementById('ui-standard').className = (c==='Accessory'||c==='Phone')?'':'hidden';
+        document.getElementById('ui-repair').className = (c==='Repair')?'':'hidden';
+        document.getElementById('ui-pawn').className = (c==='Pawn')?'':'hidden';
+        document.getElementById('ui-expense').className = (c==='Expense')?'':'hidden';
     }
 
-    function updateAddStockUIVisibility() {
-        const type = document.getElementById('add-main-type').value;
-        document.getElementById('add-form-accessory').className = (type === 'Accessory') ? '' : 'hidden';
-        document.getElementById('add-form-phone').className = (type === 'Phone') ? '' : 'hidden';
+    function updateAddUI() {
+        const t = document.getElementById('add-type').value;
+        document.getElementById('add-acc-fields').className = (t==='Accessory')?'':'hidden';
+        document.getElementById('add-phone-fields').className = (t==='Phone')?'':'hidden';
     }
 
-    function handleCustomCategoryToggle() {
-        const val = document.getElementById('add-sub-select').value;
-        document.getElementById('add-custom-cat-input').className = (val === 'CUSTOM') ? '' : 'hidden';
+    function checkCustom() {
+        document.getElementById('add-custom').className = (document.getElementById('add-sub').value==='CUSTOM')?'':'hidden';
     }
 
-    /* -------------------------------------------------------------------
-       4. INVENTORY MANAGEMENT (STOCKS / PHONES)
-       ------------------------------------------------------------------- */
-    async function saveNewStockItem() {
-        const type = document.getElementById('add-main-type').value;
-        let sub = document.getElementById('add-sub-select').value;
-        if(type === 'Accessory' && sub === 'CUSTOM') sub = document.getElementById('add-custom-cat-input').value;
-
-        const entry = {
-            type: type,
-            name: document.getElementById('add-item-name').value,
-            buy: parseFloat(document.getElementById('add-buy-price').value) || 0,
-            sell: parseFloat(document.getElementById('add-sell-price').value) || 0,
-            qty: parseInt(document.getElementById('add-stock-qty').value) || 0,
-            sub: type === 'Accessory' ? sub : '',
-            cond: type === 'Phone' ? document.getElementById('add-phone-condition').value : '',
-            specs: type === 'Phone' ? document.getElementById('add-phone-specs').value : ''
+    async function saveStock() {
+        const t = document.getElementById('add-type').value;
+        let s = document.getElementById('add-sub').value;
+        if(t==='Accessory' && s==='CUSTOM') s = document.getElementById('add-custom').value;
+        
+        const item = {
+            type: t, name: document.getElementById('add-name').value,
+            buy: parseFloat(document.getElementById('add-buy').value)||0,
+            sell: parseFloat(document.getElementById('add-sell').value)||0,
+            qty: parseInt(document.getElementById('add-qty').value)||1,
+            sub: t==='Accessory'?s:'', cond: t==='Phone'?document.getElementById('add-cond').value:'',
+            specs: t==='Phone'?document.getElementById('add-specs').value:''
         };
-
-        if(!entry.name) { alert("Please provide a product name."); return; }
-
-        await db.inventory.add(entry);
+        if(!item.name) return alert("Enter item name");
+        await db.inventory.add(item); 
         await syncToCloud();
         
-        // RESET FORM Logic
-        document.getElementById('add-item-name').value = "";
-        document.getElementById('add-buy-price').value = "";
-        document.getElementById('add-sell-price').value = "";
-        document.getElementById('add-stock-qty').value = "1";
-        document.getElementById('add-custom-cat-input').value = "";
-        document.getElementById('add-phone-specs').value = "";
+        // Auto-Clear
+        document.getElementById('add-name').value = ""; document.getElementById('add-buy').value = "";
+        document.getElementById('add-sell').value = ""; document.getElementById('add-qty').value = "1";
+        document.getElementById('add-specs').value = "";
         
-        alert("Stock Added & Form Cleared.");
-        switchInventorySubTab(type === 'Accessory' ? 'acc' : 'phone');
+        switchInv(t==='Accessory'?'acc':'phone');
     }
 
-    async function switchInventorySubTab(tab) {
+    async function switchInv(tab) {
         document.querySelectorAll('#inventory .sub-nav button').forEach(b => b.classList.remove('active'));
-        const target = document.getElementById('inv-tab-' + tab);
-        if(target) target.classList.add('active');
-
-        document.getElementById('inv-list-container').className = (tab === 'add') ? 'hidden' : '';
-        document.getElementById('inv-add-container').className = (tab === 'add') ? '' : 'hidden';
-        
-        if(tab !== 'add') refreshInventoryDisplay(tab);
+        document.getElementById('inv-tab-'+tab).classList.add('active');
+        document.getElementById('inv-list-container').className = (tab==='add')?'hidden':'';
+        document.getElementById('inv-add-container').className = (tab==='add')?'':'hidden';
+        if(tab!=='add') renderInv(tab);
     }
 
-    async function refreshInventoryDisplay(tabType = 'acc') {
-        const search = document.getElementById('inv-search-box').value.toLowerCase();
+    async function renderInv(tab='acc') {
+        const search = document.getElementById('inv-search').value.toLowerCase();
         const items = await db.inventory.toArray();
-        let html = '';
-
-        if(tabType === 'acc') {
-            const filtered = items.filter(i => i.type === 'Accessory' && i.name.toLowerCase().includes(search));
-            html = filtered.map(i => `
-                <div class="card">
-                    <b>${i.name}</b> <small style="color:var(--primary)">(${i.sub})</small><br>
-                    <small>Stock: ${i.qty} | Buy: $${i.buy} | Price: $${i.sell}</small>
-                    <div class="control-panel">
-                        <button class="btn-edit" onclick="modifyStockItem(${i.id})">Edit</button>
-                        <button class="btn-delete" onclick="removeStockItem(${i.id})">Delete</button>
-                    </div>
-                </div>`).join('');
-        } else if(tabType === 'phone') {
-            const filtered = items.filter(i => i.type === 'Phone' && i.name.toLowerCase().includes(search));
-            html = filtered.map(i => `
-                <div class="card">
-                    <b>${i.name}</b> <span class="badge" style="background:#e2e8f0">${i.cond}</span><br>
-                    <small>${i.specs}</small><br>
-                    <small>In Stock: ${i.qty} | Price: $${i.sell}</small>
-                    <div class="control-panel">
-                        <button class="btn-edit" onclick="modifyStockItem(${i.id})">Edit</button>
-                        <button class="btn-delete" onclick="removeStockItem(${i.id})">Delete</button>
-                    </div>
-                </div>`).join('');
-        } else if(tabType === 'pawn') {
+        let h = '';
+        if(tab==='acc') {
+            items.filter(i=>i.type==='Accessory'&&i.name.toLowerCase().includes(search)).forEach(i=>{
+                h += `<div class="card"><b>${i.name}</b> <small>(${i.sub})</small><br><small>Qty: ${i.qty} | Sell: $${i.sell}</small>
+                <div class="control-panel"><button class="btn-edit" onclick="editI(${i.id})">Edit</button><button class="btn-delete" onclick="delI(${i.id})">Del</button></div></div>`;
+            });
+        } else if(tab==='phone') {
+            items.filter(i=>i.type==='Phone'&&i.name.toLowerCase().includes(search)).forEach(i=>{
+                h += `<div class="card"><b>${i.name}</b> [${i.cond}]<br><small>${i.specs} | Stock: ${i.qty}</small>
+                <div class="control-panel"><button class="btn-edit" onclick="editI(${i.id})">Edit</button><button class="btn-delete" onclick="delI(${i.id})">Del</button></div></div>`;
+            });
+        } else if(tab==='pawn') {
             const pawns = await db.records.where('cat').equals('Pawn').toArray();
-            html = pawns.map(p => `
-                <div class="card">
-                    <b>${p.item}</b> <span class="badge" style="float:right; background:${p.status === 'In Shop' ? 'var(--warning)' : 'var(--success)'}; color:white">${p.status}</span><br>
-                    <small>Loaned: $${p.buy} | Interest: $${p.sell}</small>
-                    <div class="control-panel">
-                        <button class="btn-edit" style="background:var(--dark); color:white" onclick="updatePawnStatus(${p.id}, '${p.status}')">Toggle Status</button>
-                        <button class="btn-delete" onclick="removeReportEntry(${p.id})">Delete Record</button>
-                    </div>
-                </div>`).join('');
+            pawns.forEach(p=>{
+                h += `<div class="card"><b>${p.item}</b> <span class="badge" style="background:${p.status==='In Shop'?'var(--warning)':'var(--success)'}; color:white">${p.status}</span><br><small>Loan: $${p.buy}</small>
+                <div class="control-panel"><button class="btn-edit" onclick="toggleP(${p.id},'${p.status}')">Status</button><button class="btn-delete" onclick="delR(${p.id})">Del</button></div></div>`;
+            });
         }
-        document.getElementById('inv-render-target').innerHTML = html || '<p style="text-align:center; padding:30px; opacity:0.5">No matching stock found.</p>';
+        document.getElementById('inv-render').innerHTML = h || '<p style="text-align:center; opacity:0.5">Empty</p>';
     }
 
-    async function removeStockItem(id) {
-        if(confirm("Permanently delete this item from inventory?")) {
-            await db.inventory.delete(id);
-            await syncToCloud();
-            refreshInventoryDisplay();
+    async function delI(id) { if(confirm("Delete Item?")) { await db.inventory.delete(id); await syncToCloud(); renderInv(); } }
+    async function editI(id) {
+        const i = await db.inventory.get(id); 
+        const nQ = prompt("New Qty", i.qty); 
+        const nS = prompt("New Price", i.sell);
+        if(nQ !== null && nS !== null) { 
+            await db.inventory.update(id, {qty: parseInt(nQ), sell: parseFloat(nS)}); 
+            await syncToCloud(); renderInv(); 
         }
     }
 
-    async function modifyStockItem(id) {
-        const original = await db.inventory.get(id);
-        const newQty = prompt("Update Quantity:", original.qty);
-        const newPrice = prompt("Update Selling Price:", original.sell);
-        if(newQty !== null && newPrice !== null) {
-            await db.inventory.update(id, { qty: parseInt(newQty), sell: parseFloat(newPrice) });
-            await syncToCloud();
-            refreshInventoryDisplay();
-        }
-    }
-
-    /* -------------------------------------------------------------------
-       5. SALES & TRANSACTION PROCESSING
-       ------------------------------------------------------------------- */
-    async function processTransaction() {
+    async function saveSale() {
         const cat = document.getElementById('sale-cat').value;
-        const date = document.getElementById('sale-date').value || getFormattedToday();
-        let data = { date, cat, status: 'Completed' };
-
-        if(cat === 'Accessory' || cat === 'Phone') {
+        const date = document.getElementById('sale-date').value || new Date().toISOString().split('T')[0];
+        let d = { date, cat, status: 'Completed' };
+        if(cat==='Accessory'||cat==='Phone') {
             const name = document.getElementById('sale-item-name').value;
-            const stock = await db.inventory.where('name').equals(name).first();
-            const qty = parseInt(document.getElementById('sale-qty').value) || 1;
-            
-            data.item = name;
-            data.sell = parseFloat(document.getElementById('sale-price').value) || 0;
-            data.buy = (stock ? stock.buy : 0) * qty;
-            
-            if(stock) {
-                await db.inventory.update(stock.id, { qty: stock.qty - qty });
-            }
-        } else if(cat === 'Repair') {
-            data.item = "Service: " + document.getElementById('rep-desc').value;
-            data.buy = parseFloat(document.getElementById('rep-cost').value) || 0;
-            data.sell = parseFloat(document.getElementById('rep-charge').value) || 0;
-        } else if(cat === 'Pawn') {
-            data.item = "Pawn: " + document.getElementById('pawn-info').value;
-            data.buy = parseFloat(document.getElementById('pawn-loan').value) || 0;
-            data.sell = parseFloat(document.getElementById('pawn-interest').value) || 0;
-            data.status = 'In Shop';
-        } else if(cat === 'Expense') {
-            data.item = "Exp: " + document.getElementById('exp-name').value;
-            data.buy = parseFloat(document.getElementById('exp-amount').value) || 0;
-            data.sell = 0;
+            const s = await db.inventory.where('name').equals(name).first();
+            const q = parseInt(document.getElementById('sale-qty').value)||1;
+            d.item = name; d.sell = parseFloat(document.getElementById('sale-price').value)||0; d.buy = (s?s.buy:0)*q;
+            if(s) await db.inventory.update(s.id, {qty: s.qty - q});
+        } else if(cat==='Repair') {
+            d.item = "Rep: "+document.getElementById('rep-desc').value; d.buy = parseFloat(document.getElementById('rep-cost').value)||0; d.sell = parseFloat(document.getElementById('rep-charge').value)||0;
+        } else if(cat==='Pawn') {
+            d.item = document.getElementById('pawn-info').value; d.buy = parseFloat(document.getElementById('pawn-loan').value)||0; d.sell = parseFloat(document.getElementById('pawn-interest').value)||0; d.status = 'In Shop';
+        } else if(cat==='Expense') {
+            d.item = "Exp: "+document.getElementById('exp-name').value; d.buy = parseFloat(document.getElementById('exp-amount').value)||0; d.sell = 0;
         }
-
-        await db.records.add(data);
+        await db.records.add(d); 
         await syncToCloud();
-        alert("Transaction Recorded Successfully.");
-        changeGlobalTab('dashboard');
+        changeTab('dashboard');
     }
 
-    async function updatePawnStatus(id, current) {
-        const next = current === 'In Shop' ? 'Collected' : 'In Shop';
-        await db.records.update(id, { status: next });
-        await syncToCloud();
-        refreshInventoryDisplay('pawn');
+    async function toggleP(id, s) { await db.records.update(id, {status: s==='In Shop'?'Collected':'In Shop'}); await syncToCloud(); renderInv('pawn'); }
+    async function delR(id) { if(confirm("Delete record?")) { await db.records.delete(id); await syncToCloud(); renderReport(); } }
+
+    async function autoFill() {
+        const n = document.getElementById('sale-item-name').value;
+        const i = await db.inventory.where('name').equals(n).first();
+        if(i) { document.getElementById('sale-price').value = i.sell; document.getElementById('sale-cat').value = i.type; updateUI(); }
     }
 
-    async function removeReportEntry(id) {
-        if(confirm("Permanently delete this history record?")) {
-            await db.records.delete(id);
-            await syncToCloud();
-            refreshReportDisplay();
-        }
+    async function renderReport(f='All') {
+        let r = await db.records.toArray(); if(f!=='All') r = r.filter(x=>x.cat===f);
+        let sT=0, pT=0;
+        r.forEach(x=>{ if(x.cat==='Pawn'&&x.status!=='Collected') return; sT += x.sell; pT += (x.sell-x.buy); });
+        document.getElementById('report-sum').innerHTML = `<b>${f} Summary</b><br>Rev: $${sT.toFixed(2)} | Profit: $${pT.toFixed(2)}`;
+        document.getElementById('report-list').innerHTML = r.reverse().map(x=>`<div class="card"><b>${x.item}</b> <span style="float:right">$${x.sell||x.buy}</span><br><small>${x.date}</small>
+        <div class="control-panel"><button class="btn-delete" onclick="delR(${x.id})">Delete</button></div></div>`).join('');
     }
 
-    async function handleSaleAutoFill() {
-        const val = document.getElementById('sale-item-name').value;
-        const item = await db.inventory.where('name').equals(val).first();
-        if(item) {
-            document.getElementById('sale-price').value = item.sell;
-            document.getElementById('sale-cat').value = item.type;
-            updateEntryUIVisibility();
-        }
+    async function dash() {
+        const today = new Date().toISOString().split('T')[0];
+        const r = await db.records.toArray(); const i = await db.inventory.toArray();
+        let sT=0, pT=0, eT=0, cT=0, iV=0;
+        r.forEach(x=>{ const ok = (x.cat!=='Pawn'||x.status==='Collected'); if(x.date===today&&ok){ sT += x.sell; pT += (x.sell-x.buy); } if(ok){ eT += x.sell; cT += x.buy; } });
+        i.forEach(x=> iV += (x.buy*x.qty));
+        document.getElementById('dash-sales').innerText = `$${sT.toFixed(2)}`;
+        document.getElementById('dash-profit').innerText = `$${pT.toFixed(2)}`;
+        document.getElementById('fin-invest').innerText = `$${iV.toFixed(2)}`;
+        document.getElementById('fin-earn').innerText = `$${eT.toFixed(2)}`;
+        document.getElementById('fin-net').innerText = `$${(eT-cT).toFixed(2)}`;
     }
 
-    /* -------------------------------------------------------------------
-       6. REPORTING & ANALYTICS logic
-       ------------------------------------------------------------------- */
-    async function refreshReportDisplay(filter = 'All') {
-        document.querySelectorAll('#records .sub-nav button').forEach(b => b.classList.remove('active'));
-        let raw = await db.records.toArray();
-        if(filter !== 'All') raw = raw.filter(r => r.cat === filter);
-
-        let totalRev = 0;
-        let totalProf = 0;
-
-        raw.forEach(r => {
-            const isCollectedPawn = (r.cat === 'Pawn' && r.status === 'Collected');
-            const isNormalSale = (r.cat !== 'Pawn');
-            
-            if(isNormalSale || isCollectedPawn) {
-                totalRev += r.sell;
-                totalProf += (r.sell - r.buy);
-            }
-        });
-
-        document.getElementById('report-financial-summary').innerHTML = `
-            <small style="font-weight:900">${filter.toUpperCase()} SUMMARY</small>
-            <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:16px;">
-                <span>Revenue: $${totalRev.toFixed(2)}</span>
-                <span>Net Profit: <b style="color:var(--success)">$${totalProf.toFixed(2)}</b></span>
-            </div>
-        `;
-
-        document.getElementById('report-items-list').innerHTML = raw.reverse().map(r => `
-            <div class="card" style="border-left:6px solid ${r.sell >= r.buy ? 'var(--success)' : 'var(--danger)'}">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div>
-                        <b style="font-size:16px;">${r.item}</b><br>
-                        <small style="color:var(--text-sub)">${r.date} | ${r.cat} ${r.cat === 'Pawn' ? '['+r.status+']' : ''}</small>
-                    </div>
-                    <div style="text-align:right">
-                        <b style="font-size:16px;">$${r.sell || r.buy}</b>
-                    </div>
-                </div>
-                <div class="control-panel">
-                    <button class="btn-delete" onclick="removeReportEntry(${r.id})">Delete Record</button>
-                </div>
-            </div>`).join('');
+    async function changeTab(t) {
+        document.querySelectorAll('section').forEach(s=>s.classList.add('hidden'));
+        document.getElementById(t).classList.remove('hidden');
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+        const m = {dashboard:'das', 'sales-entry':'sal', inventory:'inv', records:'rec'};
+        document.getElementById('btn-'+m[t]).classList.add('active');
+        if(t==='dashboard') dash(); if(t==='inventory') switchInv('acc'); if(t==='records') renderReport('All');
+        if(t==='sales-entry') { const l = await db.inventory.toArray(); document.getElementById('stock-datalist').innerHTML = l.map(x=>`<option value="${x.name}">`).join(''); document.getElementById('sale-date').value = new Date().toISOString().split('T')[0]; }
     }
 
-    /* -------------------------------------------------------------------
-       7. DASHBOARD DATA AGGREGATION
-       ------------------------------------------------------------------- */
-    async function refreshDashboardMetrics() {
-        const today = getFormattedToday();
-        const recs = await db.records.toArray();
-        const inv = await db.inventory.toArray();
-        
-        let tSales = 0, tProf = 0, totalEarn = 0, totalCost = 0, invVal = 0;
+    function generatePDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Profit Report", 20, 20); doc.text("Net: " + document.getElementById('fin-net').innerText, 20, 35); doc.save("Report.pdf"); }
 
-        recs.forEach(r => {
-            const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
-            if(r.date === today && isValid) {
-                tSales += r.sell;
-                tProf += (r.sell - r.buy);
-            }
-            if(isValid) {
-                totalEarn += r.sell;
-                totalCost += r.buy;
-            }
-        });
-
-        inv.forEach(i => invVal += (i.buy * i.qty));
-
-        document.getElementById('dash-sales').innerText = `$${tSales.toFixed(2)}`;
-        document.getElementById('dash-profit').innerText = `$${tProf.toFixed(2)}`;
-        document.getElementById('fin-invest').innerText = `$${invVal.toFixed(2)}`;
-        document.getElementById('fin-earn').innerText = `$${totalEarn.toFixed(2)}`;
-        document.getElementById('fin-net').innerText = `$${(totalEarn - totalCost).toFixed(2)}`;
-    }
-
-    /* -------------------------------------------------------------------
-       8. GLOBAL NAVIGATION & INITIALIZATION
-       ------------------------------------------------------------------- */
-    async function changeGlobalTab(tabID) {
-        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-        document.getElementById(tabID).classList.remove('hidden');
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        
-        const navMap = {dashboard:'das', 'sales-entry':'sal', inventory:'inv', records:'rec'};
-        document.getElementById('btn-' + navMap[tabID]).classList.add('active');
-
-        if(tabID === 'dashboard') refreshDashboardMetrics();
-        if(tabID === 'inventory') switchInventorySubTab('acc');
-        if(tabID === 'records') refreshReportDisplay('All');
-        if(tabID === 'sales-entry') {
-            const listItems = await db.inventory.toArray();
-            document.getElementById('stock-datalist').innerHTML = listItems.map(i => `<option value="${i.name}">`).join('');
-            document.getElementById('sale-date').value = getFormattedToday();
-        }
-    }
-
-    function generatePDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(24); doc.text("ELITE SHOP BUSINESS REPORT", 20, 25);
-        doc.setFontSize(14); doc.text("Total Shop Net Profit: " + document.getElementById('fin-net').innerText, 20, 45);
-        doc.text("Inventory Valuation: " + document.getElementById('fin-invest').innerText, 20, 55);
-        doc.save("EliteShop_FullReport_" + getFormattedToday() + ".pdf");
-    }
-
-    // Launch Application
-    changeGlobalTab('dashboard');
+    changeTab('dashboard');
 </script>
 </body>
 </html>
