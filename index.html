@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elite Shop Manager Pro - Version 7.0 (Total Expansion)</title>
+    <title>Elite Shop Manager Pro - Version 7.2 (Smart Calc & Speed)</title>
     
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -66,7 +66,6 @@
 
         .container { padding: 15px; max-width: 600px; margin: auto; }
         
-        /* --- CARD & COMPONENT STYLING --- */
         .card { 
             background: var(--card); 
             padding: 22px; 
@@ -92,6 +91,11 @@
         }
         input:focus { border-color: var(--primary); outline: none; background: #fff; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
 
+        /* Custom styling for Per Unit Checkbox area */
+        .check-group { display: flex; align-items: center; gap: 8px; margin-top: -5px; margin-bottom: 15px; }
+        .check-group input[type="checkbox"] { width: 20px; height: 20px; margin: 0; cursor: pointer; }
+        .check-group label { margin: 0; font-size: 12px; cursor: pointer; }
+
         .action-btn { 
             background: var(--primary); color: white; border: none; 
             width: 100%; padding: 20px; border-radius: 18px; 
@@ -101,7 +105,6 @@
         }
         .action-btn:active { transform: scale(0.98); }
 
-        /* --- NAVIGATION STYLING --- */
         .sub-nav { 
             display: flex; gap: 10px; margin-bottom: 20px; 
             background: #e2e8f0; padding: 8px; border-radius: 18px; 
@@ -126,12 +129,10 @@
         .nav-item span { font-size: 32px; }
         .nav-item.active { color: var(--primary); font-weight: 900; }
 
-        /* --- UI UTILITIES --- */
         .hidden { display: none !important; }
         .badge { padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; text-transform: uppercase; }
         .report-summary-card { background: #f8fafc; border-left: 6px solid var(--primary); padding: 20px; border-radius: 16px; margin-bottom: 20px; }
         
-        /* --- CRUD BUTTONS --- */
         .control-panel { display: flex; gap: 12px; margin-top: 15px; border-top: 1.5px solid #f1f5f9; padding-top: 15px; }
         .btn-edit { flex: 1; background: #eff6ff; color: var(--primary); border: none; padding: 10px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer; }
         .btn-delete { flex: 1; background: #fef2f2; color: var(--danger); border: none; padding: 10px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer; }
@@ -197,9 +198,16 @@
                 <label>Find Item in Stock</label>
                 <input list="stock-datalist" id="sale-item-name" onchange="handleSaleAutoFill()" placeholder="Search product name...">
                 <datalist id="stock-datalist"></datalist>
-                <div style="display:flex; gap:12px;">
+                <div style="display:flex; gap:12px; align-items: flex-end;">
                     <div style="flex:1;"><label>Quantity</label><input type="number" id="sale-qty" value="1"></div>
-                    <div style="flex:2;"><label>Selling Price</label><input type="number" id="sale-price"></div>
+                    <div style="flex:2;">
+                        <label>Selling Price</label>
+                        <input type="number" id="sale-price">
+                        <div class="check-group">
+                            <input type="checkbox" id="sale-per-unit">
+                            <label for="sale-per-unit">Per Unit (Auto Calc)</label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -315,9 +323,6 @@
 </nav>
 
 <script>
-    /* -------------------------------------------------------------------
-       1. CORE CONFIGURATION & DATABASE
-       ------------------------------------------------------------------- */
     const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwdKHtI0gT9gcfrH74uh6-CqAzezEEUxsanQIxuJKeG00bQVfVxGfb5EuZf6qT3WhCN/exec";
     const db = new Dexie("EliteShop_Pro_V7_TotalExpansion");
     
@@ -328,9 +333,6 @@
 
     const getFormattedToday = () => new Date().toISOString().split('T')[0];
 
-    /* -------------------------------------------------------------------
-       2. CLOUD SYNCHRONIZATION
-       ------------------------------------------------------------------- */
     async function syncToCloud() {
         const dot = document.getElementById('sync-dot');
         dot.style.background = 'var(--syncing)';
@@ -368,13 +370,10 @@
                 location.reload();
             }
         } catch(e) {
-            alert("Connection error. Check your Script URL.");
+            alert("Connection error.");
         }
     }
 
-    /* -------------------------------------------------------------------
-       3. UI VISIBILITY CONTROLS
-       ------------------------------------------------------------------- */
     function updateEntryUIVisibility() {
         const cat = document.getElementById('sale-cat').value;
         document.getElementById('ui-standard').className = (cat === 'Accessory' || cat === 'Phone') ? '' : 'hidden';
@@ -394,9 +393,6 @@
         document.getElementById('add-custom-cat-input').className = (val === 'CUSTOM') ? '' : 'hidden';
     }
 
-    /* -------------------------------------------------------------------
-       4. INVENTORY MANAGEMENT (STOCKS / PHONES)
-       ------------------------------------------------------------------- */
     async function saveNewStockItem() {
         const type = document.getElementById('add-main-type').value;
         let sub = document.getElementById('add-sub-select').value;
@@ -413,24 +409,15 @@
             specs: type === 'Phone' ? document.getElementById('add-phone-specs').value : ''
         };
 
-        if(!entry.name) { alert("Please provide a product name."); return; }
-
-        // Start Blue Dot Sync immediately for faster feedback
-        const dot = document.getElementById('sync-dot');
-        dot.style.background = 'var(--syncing)';
-        dot.style.boxShadow = '0 0 10px var(--syncing)';
+        if(!entry.name) return;
 
         await db.inventory.add(entry);
         
-        // RESET FORM Logic
         document.getElementById('add-item-name').value = "";
         document.getElementById('add-buy-price').value = "";
         document.getElementById('add-sell-price').value = "";
         document.getElementById('add-stock-qty').value = "1";
-        document.getElementById('add-custom-cat-input').value = "";
-        document.getElementById('add-phone-specs').value = "";
         
-        // REMOVED ALERT & TAB SWITCH: This keeps user on same page and is much faster
         await syncToCloud();
     }
 
@@ -489,7 +476,7 @@
     }
 
     async function removeStockItem(id) {
-        if(confirm("Permanently delete this item from inventory?")) {
+        if(confirm("Permanently delete?")) {
             await db.inventory.delete(id);
             await syncToCloud();
             refreshInventoryDisplay();
@@ -508,7 +495,7 @@
     }
 
     /* -------------------------------------------------------------------
-       5. SALES & TRANSACTION PROCESSING
+       5. SALES PROCESSING (SMART CALC & AUTO CLEAR)
        ------------------------------------------------------------------- */
     async function processTransaction() {
         const cat = document.getElementById('sale-cat').value;
@@ -519,9 +506,12 @@
             const name = document.getElementById('sale-item-name').value;
             const stock = await db.inventory.where('name').equals(name).first();
             const qty = parseInt(document.getElementById('sale-qty').value) || 1;
-            
+            let inputPrice = parseFloat(document.getElementById('sale-price').value) || 0;
+            const isPerUnit = document.getElementById('sale-per-unit').checked;
+
+            // SMART CALC: If Per Unit is checked, multiply Price * Qty
+            data.sell = isPerUnit ? (inputPrice * qty) : inputPrice;
             data.item = name;
-            data.sell = parseFloat(document.getElementById('sale-price').value) || 0;
             data.buy = (stock ? stock.buy : 0) * qty;
             
             if(stock) {
@@ -542,10 +532,27 @@
             data.sell = 0;
         }
 
+        if(!data.item) return;
+
+        // Instant Background Save
         await db.records.add(data);
+        
+        // AUTO CLEAR EVERYTHING
+        document.getElementById('sale-item-name').value = "";
+        document.getElementById('sale-qty').value = "1";
+        document.getElementById('sale-price').value = "";
+        document.getElementById('sale-per-unit').checked = false;
+        document.getElementById('rep-desc').value = "";
+        document.getElementById('rep-cost').value = "";
+        document.getElementById('rep-charge').value = "";
+        document.getElementById('pawn-info').value = "";
+        document.getElementById('pawn-loan').value = "";
+        document.getElementById('pawn-interest').value = "";
+        document.getElementById('exp-name').value = "";
+        document.getElementById('exp-amount').value = "";
+
+        // Trigger Cloud Sync (Dot turns blue automatically inside syncToCloud)
         await syncToCloud();
-        alert("Transaction Recorded Successfully.");
-        changeGlobalTab('dashboard');
     }
 
     async function updatePawnStatus(id, current) {
@@ -556,7 +563,7 @@
     }
 
     async function removeReportEntry(id) {
-        if(confirm("Permanently delete this history record?")) {
+        if(confirm("Delete record?")) {
             await db.records.delete(id);
             await syncToCloud();
             refreshReportDisplay();
@@ -573,22 +580,15 @@
         }
     }
 
-    /* -------------------------------------------------------------------
-       6. REPORTING & ANALYTICS logic
-       ------------------------------------------------------------------- */
     async function refreshReportDisplay(filter = 'All') {
         document.querySelectorAll('#records .sub-nav button').forEach(b => b.classList.remove('active'));
         let raw = await db.records.toArray();
         if(filter !== 'All') raw = raw.filter(r => r.cat === filter);
 
-        let totalRev = 0;
-        let totalProf = 0;
-
+        let totalRev = 0, totalProf = 0;
         raw.forEach(r => {
-            const isCollectedPawn = (r.cat === 'Pawn' && r.status === 'Collected');
-            const isNormalSale = (r.cat !== 'Pawn');
-            
-            if(isNormalSale || isCollectedPawn) {
+            const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
+            if(isValid) {
                 totalRev += r.sell;
                 totalProf += (r.sell - r.buy);
             }
@@ -606,41 +606,30 @@
             <div class="card" style="border-left:6px solid ${r.sell >= r.buy ? 'var(--success)' : 'var(--danger)'}">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
-                        <b style="font-size:16px;">${r.item}</b><br>
-                        <small style="color:var(--text-sub)">${r.date} | ${r.cat} ${r.cat === 'Pawn' ? '['+r.status+']' : ''}</small>
+                        <b>${r.item}</b><br>
+                        <small>${r.date} | ${r.cat}</small>
                     </div>
-                    <div style="text-align:right">
-                        <b style="font-size:16px;">$${r.sell || r.buy}</b>
-                    </div>
+                    <b>$${r.sell || r.buy}</b>
                 </div>
-                <div class="control-panel">
-                    <button class="btn-delete" onclick="removeReportEntry(${r.id})">Delete Record</button>
-                </div>
+                <div class="control-panel"><button class="btn-delete" onclick="removeReportEntry(${r.id})">Delete</button></div>
             </div>`).join('');
     }
 
-    /* -------------------------------------------------------------------
-       7. DASHBOARD DATA AGGREGATION
-       ------------------------------------------------------------------- */
     async function refreshDashboardMetrics() {
         const today = getFormattedToday();
         const recs = await db.records.toArray();
         const inv = await db.inventory.toArray();
-        
         let tSales = 0, tProf = 0, totalEarn = 0, totalCost = 0, invVal = 0;
 
         recs.forEach(r => {
             const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
             if(r.date === today && isValid) {
-                tSales += r.sell;
-                tProf += (r.sell - r.buy);
+                tSales += r.sell; tProf += (r.sell - r.buy);
             }
             if(isValid) {
-                totalEarn += r.sell;
-                totalCost += r.buy;
+                totalEarn += r.sell; totalCost += r.buy;
             }
         });
-
         inv.forEach(i => invVal += (i.buy * i.qty));
 
         document.getElementById('dash-sales').innerText = `$${tSales.toFixed(2)}`;
@@ -650,9 +639,6 @@
         document.getElementById('fin-net').innerText = `$${(totalEarn - totalCost).toFixed(2)}`;
     }
 
-    /* -------------------------------------------------------------------
-       8. GLOBAL NAVIGATION & INITIALIZATION
-       ------------------------------------------------------------------- */
     async function changeGlobalTab(tabID) {
         document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
         document.getElementById(tabID).classList.remove('hidden');
@@ -674,14 +660,10 @@
     function generatePDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(24); doc.text("ELITE SHOP BUSINESS REPORT", 20, 25);
-        doc.setFontSize(14); doc.text("Total Shop Net Profit: " + document.getElementById('fin-net').innerText, 20, 45);
-        doc.text("Inventory Valuation: " + document.getElementById('fin-invest').innerText, 20, 55);
-        doc.save("EliteShop_FullReport_" + getFormattedToday() + ".pdf");
+        doc.text("ELITE SHOP BUSINESS REPORT", 20, 25);
+        doc.save("Report_" + getFormattedToday() + ".pdf");
     }
 
-    // Launch Application
     changeGlobalTab('dashboard');
 </script>
 </body>
