@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elite Shop Manager Pro - Version 11.0</title>
+    <title>Elite Shop Manager Pro - Version 11.1</title>
     
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -65,10 +65,9 @@
 
         .container { padding: 15px; max-width: 600px; margin: auto; }
         
-        /* 10% Smaller Dashboard Styling */
         .card { 
             background: var(--card); 
-            padding: 18px; /* Reduced from 22px */
+            padding: 18px; 
             border-radius: 20px; 
             margin-bottom: 15px; 
             box-shadow: 0 5px 15px rgba(0,0,0,0.04); 
@@ -105,14 +104,13 @@
             transition: transform 0.1s;
         }
 
-        /* Hidden Dashboard Range Filter */
         .dash-filter-container { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px dashed rgba(255,255,255,0.2); }
         .dash-filter-container label { color: #fff; margin-top: 5px; font-size: 9px; }
         .dash-filter-container input { padding: 8px; font-size: 12px; border-radius: 8px; margin-bottom: 5px; }
+        
         .calendar-icon { cursor: pointer; font-size: 16px; opacity: 0.7; }
         .calendar-icon:hover { opacity: 1; color: var(--warning); }
 
-        /* Report Styles */
         .date-pager { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; background: #fff; padding: 15px; border-radius: 15px; border: 1px solid #e2e8f0; }
         .pager-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .range-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
@@ -132,7 +130,6 @@
         .report-summary-card { background: #f8fafc; border-left: 6px solid var(--primary); padding: 20px; border-radius: 16px; margin-bottom: 20px; }
         
         .control-panel { display: flex; gap: 12px; margin-top: 15px; border-top: 1.5px solid #f1f5f9; padding-top: 15px; }
-        .btn-edit { flex: 1; background: #eff6ff; color: var(--primary); border: none; padding: 10px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer; }
         .btn-delete { flex: 1; background: #fef2f2; color: var(--danger); border: none; padding: 10px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer; }
     </style>
 </head>
@@ -175,10 +172,10 @@
             </div>
 
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px;">
-                <span style="opacity:0.8">Cash in Pocket:</span> <span id="dash-cash" style="font-weight:900; color: var(--success);">$0.00</span>
+                <span style="opacity:0.8">Total Stock Invested:</span> <span id="dash-total-invest" style="font-weight:900; color: var(--warning);">$0.00</span>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px;">
-                <span style="opacity:0.8">Inventory Value:</span> <span id="fin-invest" style="font-weight:700">$0.00</span>
+                <span style="opacity:0.8">Current Inventory Value:</span> <span id="fin-invest" style="font-weight:700">$0.00</span>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px;">
                 <span style="opacity:0.8">Total Revenue:</span> <span id="fin-earn" style="color:var(--success); font-weight:700">$0.00</span>
@@ -363,21 +360,56 @@
         inventory: '++id, type, sub, name, buy, sell, qty, specs, cond'
     });
 
+    const getFormattedToday = () => new Date().toISOString().split('T')[0];
     let currentReportFilter = 'All';
     let reportViewMode = 'daily';
-    const getFormattedToday = () => new Date().toISOString().split('T')[0];
 
-    // DASHBOARD RANGE LOGIC
-    function toggleDashFilter() {
-        document.getElementById('dash-filter-area').classList.toggle('hidden');
-    }
-    function clearDashFilter() {
-        document.getElementById('dash-from').value = "";
-        document.getElementById('dash-to').value = "";
-        refreshDashboardMetrics();
+    // DASHBOARD LOGIC
+    async function refreshDashboardMetrics() {
+        const today = getFormattedToday();
+        const from = document.getElementById('dash-from').value;
+        const to = document.getElementById('dash-to').value;
+        
+        let recs = await db.records.toArray();
+        const inv = await db.inventory.toArray();
+        
+        if(from && to) {
+            recs = recs.filter(r => r.date >= from && r.date <= to);
+        }
+
+        let tSales = 0, tProf = 0, totalEarn = 0, totalCost = 0, invCurrentVal = 0, totalStockInvested = 0;
+
+        // Financial Calculations
+        recs.forEach(r => {
+            const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
+            if(r.date === today && isValid) { tSales += r.sell; tProf += (r.sell - r.buy); }
+            if(isValid) { totalEarn += r.sell; totalCost += r.buy; }
+        });
+
+        // Inventory Calculations
+        inv.forEach(i => {
+            invCurrentVal += (i.buy * i.qty);
+            // "Total Stock Invested" includes everything ever added, regardless of if it sold
+            // This is calculated as current inventory cost + historical cost of sold items
+            totalStockInvested += (i.buy * i.qty);
+        });
+        
+        // Add cost of items already sold from records to get historical "Total Invested"
+        recs.forEach(r => {
+            if(r.cat === 'Accessory' || r.cat === 'Phone') {
+                totalStockInvested += (r.buy || 0);
+            }
+        });
+
+        document.getElementById('dash-sales').innerText = `$${tSales.toFixed(2)}`;
+        document.getElementById('dash-profit').innerText = `$${tProf.toFixed(2)}`;
+        document.getElementById('dash-total-invest').innerText = `$${totalStockInvested.toFixed(2)}`;
+        document.getElementById('fin-invest').innerText = `$${invCurrentVal.toFixed(2)}`;
+        document.getElementById('fin-earn').innerText = `$${totalEarn.toFixed(2)}`;
+        document.getElementById('fin-net').innerText = `$${(totalEarn - totalCost).toFixed(2)}`;
     }
 
-    // CLOUD SYNC LOGIC
+    // CLOUD & SYNC
     async function syncToCloud() {
         const dot = document.getElementById('sync-dot');
         dot.style.background = 'var(--syncing)';
@@ -404,7 +436,7 @@
         } catch(e) { alert("Error pulling data."); }
     }
 
-    // ENTRY LOGIC
+    // TRANSACATION LOGIC
     function updateEntryUIVisibility() {
         const cat = document.getElementById('sale-cat').value;
         document.getElementById('ui-standard').className = (cat === 'Accessory' || cat === 'Phone') ? '' : 'hidden';
@@ -459,7 +491,7 @@
         changeGlobalTab('dashboard');
     }
 
-    // INVENTORY LOGIC
+    // STOCK LOGIC
     function updateAddStockUIVisibility() {
         const type = document.getElementById('add-main-type').value;
         document.getElementById('add-form-accessory').className = (type === 'Accessory') ? '' : 'hidden';
@@ -510,7 +542,6 @@
                     <b>${i.name}</b> <small>(${i.sub})</small><br>
                     <small>Qty: ${i.qty} | Buy: $${i.buy} | Sell: $${i.sell}</small>
                     <div class="control-panel">
-                        <button class="btn-edit" onclick="modifyStock(${i.id})">Edit</button>
                         <button class="btn-delete" onclick="deleteStock(${i.id})">Delete</button>
                     </div>
                 </div>`).join('');
@@ -520,7 +551,9 @@
                     <b>${i.name}</b> <span class="badge" style="background:#eee">${i.cond}</span><br>
                     <small>${i.specs}</small><br>
                     <small>Qty: ${i.qty} | Price: $${i.sell}</small>
-                    <div class="control-panel"><button class="btn-edit" onclick="modifyStock(${i.id})">Edit</button></div>
+                    <div class="control-panel">
+                        <button class="btn-delete" onclick="deleteStock(${i.id})">Delete</button>
+                    </div>
                 </div>`).join('');
         } else if(tab === 'pawn') {
             const pawns = await db.records.where('cat').equals('Pawn').toArray();
@@ -534,43 +567,16 @@
         document.getElementById('inv-render-target').innerHTML = html;
     }
 
+    async function deleteStock(id) {
+        if(confirm("Remove item from stock?")) { await db.inventory.delete(id); refreshInventoryDisplay(); }
+    }
+
     async function togglePawn(id, s) {
         await db.records.update(id, { status: s === 'In Shop' ? 'Collected' : 'In Shop' });
         refreshInventoryDisplay('pawn');
     }
 
-    // DASHBOARD & REPORT REFRESH
-    async function refreshDashboardMetrics() {
-        const today = getFormattedToday();
-        const from = document.getElementById('dash-from').value;
-        const to = document.getElementById('dash-to').value;
-        
-        let recs = await db.records.toArray();
-        const inv = await db.inventory.toArray();
-        
-        // Dashboard Range Filter Application
-        if(from && to) {
-            recs = recs.filter(r => r.date >= from && r.date <= to);
-        }
-
-        let tSales = 0, tProf = 0, totalEarn = 0, totalCost = 0, invVal = 0, cashInPocket = 0;
-
-        recs.forEach(r => {
-            const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
-            cashInPocket += (r.sell - r.buy); // Cash math logic
-            if(r.date === today && isValid) { tSales += r.sell; tProf += (r.sell - r.buy); }
-            if(isValid) { totalEarn += r.sell; totalCost += r.buy; }
-        });
-        inv.forEach(i => invVal += (i.buy * i.qty));
-
-        document.getElementById('dash-sales').innerText = `$${tSales.toFixed(2)}`;
-        document.getElementById('dash-profit').innerText = `$${tProf.toFixed(2)}`;
-        document.getElementById('dash-cash').innerText = `$${cashInPocket.toFixed(2)}`;
-        document.getElementById('fin-invest').innerText = `$${invVal.toFixed(2)}`;
-        document.getElementById('fin-earn').innerText = `$${totalEarn.toFixed(2)}`;
-        document.getElementById('fin-net').innerText = `$${(totalEarn - totalCost).toFixed(2)}`;
-    }
-
+    // REPORT LOGIC
     function toggleReportMode() {
         reportViewMode = (reportViewMode === 'daily') ? 'range' : 'daily';
         document.getElementById('pager-daily').className = (reportViewMode === 'daily') ? 'pager-controls' : 'hidden';
@@ -612,10 +618,8 @@
             const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
             if(isValid) { rev += r.sell; prof += (r.sell - r.buy); }
             
-            // SMART GROUPING
-            const key = `${r.item}-${r.cat}`;
-            if(!grouped[key]) grouped[key] = { ...r, gqty: r.qty || 1, gsell: r.sell };
-            else { grouped[key].gqty += (r.qty || 1); grouped[key].gsell += r.sell; }
+            const key = `${r.item}-${r.cat}-${r.id}`;
+            grouped[key] = { ...r, gqty: r.qty || 1, gsell: r.sell };
         });
 
         document.getElementById('report-financial-summary').innerHTML = `
@@ -639,6 +643,7 @@
         if(confirm("Delete record?")) { await db.records.delete(id); refreshReportDisplay(); }
     }
 
+    // NAVIGATION
     async function changeGlobalTab(tabID) {
         document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
         document.getElementById(tabID).classList.remove('hidden');
@@ -658,6 +663,13 @@
             const invItems = await db.inventory.toArray();
             document.getElementById('stock-datalist').innerHTML = invItems.map(i => `<option value="${i.name}">`).join('');
         }
+    }
+
+    function toggleDashFilter() { document.getElementById('dash-filter-area').classList.toggle('hidden'); }
+    function clearDashFilter() { 
+        document.getElementById('dash-from').value = ""; 
+        document.getElementById('dash-to').value = ""; 
+        refreshDashboardMetrics(); 
     }
 
     function generatePDF() {
