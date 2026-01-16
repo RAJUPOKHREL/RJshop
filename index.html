@@ -7,8 +7,9 @@
     
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style> 
-/* 1. TARGETING THE OPTIONS DROPDOWN & SELECT BOXES */
+    
+    <style> 
+    /* 1. TARGETING THE OPTIONS DROPDOWN & SELECT BOXES */
     select, 
     option, 
     .options-btn, 
@@ -19,24 +20,22 @@
         color: white !important; 
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
         backdrop-filter: none !important;
-        -webkit-appearance: none; /* Removes mobile default white styling */
+        -webkit-appearance: none; 
     }
-	/* 3. ENSURING DROPDOWN LIST IS READABLE */
-    /* Note: On some mobile browsers, the "list" that pops up might stay dark 
-       to ensure you can read the white text against the wallpaper */
+
     select option { 
         background: rgba(0, 0, 0, 0.8) !important; 
         color: white !important; 
     }
-    }
-:root { 
-        --primary: #2563eb; 
+
+    :root { 
+        --primary: #77777777; 
         --success: #10b981; 
         --danger: #ef4444; 
         --warning: #f59e0b; 
     }
 
-    /* 1. THE WALLPAPER */
+    /* 2. THE WALLPAPER */
     html, body { 
         margin: 0; padding: 0; min-height: 100vh;
         background: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), 
@@ -47,7 +46,7 @@
         padding-bottom: 120px; color: white; -webkit-tap-highlight-color: transparent;
     }
 
-    /* 2. HEADER & FLOATING PILL NAV */
+    /* 3. HEADER & FLOATING PILL NAV */
     .header { padding: 15px 20px; background: transparent !important; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
 
     .bottom-nav { 
@@ -59,87 +58,96 @@
     .nav-item { background: transparent !important; border: none !important; color: rgba(255, 255, 255, 0.6) !important; padding: 10px 15px; display: flex; flex-direction: column; align-items: center; transition: 0.3s; font-size: 12px; }
     .nav-item.active { color: white !important; background: rgba(255, 255, 255, 0.15) !important; border-radius: 20px; }
 
-    /* 3. OVERVIEW CARD & ALL CARDS (MORE TRANSPARENT) */
+    /* 4. CARDS (100% CLARITY - NO BLUR) */
     .card, .dash-dark-card, .report-summary-card, .date-pager { 
-        background: rgba(255, 255, 255, 0.03) !important; /* Decreased opacity for more transparency */
-        backdrop-filter: blur(-1px); border: 1px solid rgba(255, 255, 255, 0.1) !important; 
+        background: rgba(255, 255, 255, 0.03) !important; 
+        backdrop-filter: none !important; 
+        border: 1px solid rgba(255, 255, 255, 0.1) !important; 
         padding: 18px; border-radius: 20px; margin-bottom: 15px; box-sizing: border-box; overflow: hidden;
     }
 
-    /* 4. FIXING THE PDF BUTTON (MAKE IT GLASS) */
-    #generate-pdf-btn, .action-btn, button[onclick*="generate"] { 
-        background: rgba(255, 255, 255, 0.1) !important; 
+    /* 5. NEXT / DATE / PREV LAYOUT (FIXED TO ONE LINE) */
+    .pager-controls { 
+        display: flex !important; 
+        flex-direction: row !important; /* Forces horizontal line */
+        align-items: center !important; 
+        justify-content: space-between !important; 
+        gap: 10px; 
+    }
+    .pager-controls span { 
+        flex: 1; 
+        text-align: center; 
+        font-weight: 800; 
+        font-size: 14px; 
+    }
+    .prev-btn, .next-btn { width: auto !important; flex: 0 0 auto !important; }
+
+    /* 6. BUTTONS (100% TRANSPARENT) */
+    #generate-pdf-btn, .action-btn, .date-pager button, .control-panel button, #pull-btn, .prev-btn, .next-btn { 
+        background: transparent !important; 
         color: white !important; 
+		box-shadow : 0 4px 15px rgba(0,0,0,0.3)
         border: 1px solid rgba(255, 255, 255, 0.3) !important; 
-        backdrop-filter: blur(10px);
-        width: 100%; padding: 18px; border-radius: 15px; font-weight: 800; margin-top: 10px; cursor: pointer;
+        backdrop-filter: none !important;
+        padding: 12px 18px; border-radius: 12px; font-weight: 800; cursor: pointer;
         transition: 0.3s ease;
     }
-    #generate-pdf-btn:hover { background: rgba(255, 255, 255, 0.2) !important; }
+	/* SPECIFICALLY CENTER THE MAIN ACTION BUTTONS */
+.action-btn, #save-inv-btn {
+    display: block !important;
+    width: 43% !important; /* Slightly smaller than full width looks better */
+    margin: 30px auto !important; /* Adds space above and below */
+    
+    /* THE TRICK TO FORCE CENTER */
+    position: relative !important;
+    left: 23% !important;
+    transform: translateX(-50%) !important;
+    
+    text-align: center !important;
+    white-space: nowrap;
+}
 
-    /* 5. ELITE GRID (Sales & Profit Boxes) */
+    /* 7. ELITE GRID & INPUTS */
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
     .mini-stat { 
         padding: 20px; border-radius: 22px; display: flex; flex-direction: column;
-        background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
-    .mini-stat small { font-size: 10px; text-transform: uppercase; font-weight: 800; opacity: 0.8; margin-bottom: 5px; }
     .mini-stat strong { font-size: 24px; font-weight: 900; }
-    .mini-stat.blue { border-bottom: 3px solid var(--primary) !important; }
-    .mini-stat.green { border-bottom: 3px solid var(--success) !important; }
-
-    /* 6. INPUTS & DROPDOWNS */
+    
     input, select, textarea { 
         width: 100% !important; box-sizing: border-box !important; padding: 16px; margin-bottom: 12px; border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important; background: rgba(0, 0, 0, 0.3) !important; color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important; background: transparent !important; color: white !important;
     }
 
-    /* 7. TAB LOGIC & UTILS */
+    /* 8. TAB LOGIC & UTILS */
     .hidden { display: none !important; }
     .container { padding: 15px; max-width: 600px; margin: auto; }
     h1, h2, h3, strong, label { color: white !important; }
 
-    /* Active Sub-Nav Shading (Blue) */
     .sub-nav { display: flex; gap: 8px; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 6px; border-radius: 15px; }
     .sub-nav button { flex: 1; border: none; padding: 12px; border-radius: 10px; font-weight: 700; color: white; opacity: 0.5; background: none; }
     .sub-nav button.active { background: var(--primary); opacity: 1; }
-    /* 1. APPLYING 100% TRANSPARENCY TO SPECIFIC BUTTONS ONLY */
-    /* Target: Next/Prev, Pull, Range Picker, Options, and PDF button */
-    .date-pager button, 
-    .control-panel button, 
-    #pull-btn, 
-    .range-picker,
-    .options-btn,
-    .prev-btn, 
-    .next-btn,
-    #generate-pdf-btn,
-    .action-btn { 
-        background: transparent !important; 
-        background-color: transparent !important;
-        color: white !important; 
-        border: 1px solid rgba(255, 255, 255, 0.3) !important; 
-        backdrop-filter: none !important;
-        box-shadow: none !important;
+	/* NEW: QUANTITY & PRICE SIDE-BY-SIDE */
+    .sales-row {
+        display: flex;
+        gap: 12px;
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    .sales-row > div {
+        flex: 1;
     }
 
-    /* 2. ENSURING CARDS STAY TRANSPARENT WITHOUT BLUR */
-    .card, .dash-dark-card, .report-summary-card, .date-pager { 
-        background: rgba(255, 255, 255, 0.03) !important; 
-        backdrop-filter: none !important; /* Set to none for 100% clarity */
-    }
-
-    /* 3. KEEPING INPUTS TRANSPARENT */
-    input, select, textarea { 
-        background: transparent !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
-
-    /* 4. HOVER EFFECT FOR TRANSPARENT BUTTONS */
-    .date-pager button:hover, .prev-btn:hover, .next-btn:hover, #pull-btn:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
+    /* NEW: BIGGER CHECKBOX */
+    input[type="checkbox"] {
+        width: 30px !important;
+        height: 30px !important;
+        cursor: pointer;
+        accent-color: var(--success); /* Makes the check mark green */
+        vertical-align: middle;
     }
 </style>
-  
 </head>
 <body>
 
@@ -244,7 +252,7 @@
                 <label>Find Item in Stock</label>
                 <input list="stock-datalist" id="sale-item-name" onchange="handleSaleAutoFill()" placeholder="Search product name...">
                 <datalist id="stock-datalist"></datalist>
-                <div style="display:flex; gap:12px; align-items: flex-end;">
+                <div style="display:flex; gap:12px; align-items: flex;">
                     <div style="flex:1;"><label>Quantity</label><input type="number" id="sale-qty" value="1"></div>
                     <div style="flex:2;">
                         <label>Selling Price</label>
@@ -421,19 +429,7 @@
             dot.style.background = 'var(--success)';
         } catch(e) { dot.style.background = 'var(--danger)'; }
     }
-function showTab(tabId) {
-    // 1. Your existing code to hide/show tabs
-    document.querySelectorAll('.container').forEach(c => c.classList.add('hidden'));
-    document.getElementById(tabId).classList.remove('hidden');
 
-    // 2. THE FIX: Add this line here
-    // This forces the screen to jump to the top every time you switch tabs
-    window.scrollTo(0, 0);
-
-    // 3. Your existing code to change the active nav button color
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-}
     async function syncFromCloud() {
         if(!confirm("Pull cloud data? This will overwrite local data.")) return;
         try {
@@ -601,17 +597,22 @@ alert("Added!");
 
     // DASHBOARD & REPORT REFRESH
     async function refreshDashboardMetrics() {
-    const from = document.getElementById('dash-from').value;
-    const to = document.getElementById('dash-to').value;
+    let from = document.getElementById('dash-from').value;
+    let to = document.getElementById('dash-to').value;
+    
+    // 1. IMPROVEMENT: If no date is selected, default to TODAY 
+    // This stops it from showing $0 or "Total History" on startup
+    if(!from || !to) {
+        const today = new Date().toISOString().split('T')[0];
+        from = today;
+        to = today;
+    }
     
     let allRecs = await db.records.toArray();
     const inv = await db.inventory.toArray();
     
-    // Filter by Date - This is what makes it "Active"
-    let filteredRecs = allRecs;
-    if(from && to) {
-        filteredRecs = allRecs.filter(r => r.date >= from && r.date <= to);
-    }
+    // Filter by Date
+    let filteredRecs = allRecs.filter(r => r.date >= from && r.date <= to);
 
     let totalRevenue = 0;
     let serviceExpense = 0;
@@ -619,7 +620,7 @@ alert("Added!");
     let totalStockInvested = 0; 
     let currentInventoryValue = 0; 
 
-    // 1. CALCULATE FROM FILTERED RECORDS (This changes when you pick dates)
+    // CALCULATE FROM FILTERED RECORDS
     filteredRecs.forEach(r => {
         if(r.cat === 'Expense') {
             generalExpense += (r.buy || 0); 
@@ -631,17 +632,15 @@ alert("Added!");
         }
     });
 
-    // 2. CALCULATE FROM INVENTORY (Global status)
+    // CALCULATE FROM INVENTORY
     inv.forEach(i => {
         currentInventoryValue += (i.buy * i.qty);
         totalStockInvested += (i.buy * (i.qty + (i.sold || 0)));
     });
 
-    // 3. MATH FOR SUMMARY
-    // Cash in Hand = Revenue minus the expenses paid in that range
+    // MATH FOR SUMMARY
     let cashInHand = totalRevenue - generalExpense - serviceExpense;
     
-    // Cost of Goods Sold for the selected range
     let costOfSoldItems = 0;
     filteredRecs.forEach(r => {
         if(r.cat !== 'Expense' && r.cat !== 'Repair') {
@@ -651,7 +650,11 @@ alert("Added!");
 
     let netProfit = totalRevenue - costOfSoldItems - generalExpense - serviceExpense;
 
-    // 4. UPDATE UI
+    // 2. UPDATE TOP BOXES (The parts that were missing)
+    document.getElementById('dash-sales').innerText = `$${totalRevenue.toFixed(2)}`;
+    document.getElementById('dash-profit').innerText = `$${netProfit.toFixed(2)}`;
+
+    // 3. YOUR ORIGINAL UI UPDATES (Stayed exactly the same)
     document.getElementById('fin-total-invest').innerText = `$${totalStockInvested.toFixed(2)}`;
     document.getElementById('fin-invest').innerText = `$${currentInventoryValue.toFixed(2)}`;
     document.getElementById('fin-serv-exp').innerText = `$${serviceExpense.toFixed(2)}`;
@@ -751,6 +754,24 @@ alert("Added!");
 
     async function deleteRec(id) {
     if(confirm("Delete this record permanently?")) { 
+        // 1. GET THE RECORD DATA BEFORE DELETING (To see what was sold)
+        const record = await db.records.get(id);
+        
+        if (record) {
+            // 2. CHECK IF CATEGORY IS ACCESSORY OR PHONE
+            if (record.cat === 'Accessory' || record.cat === 'Phone') {
+                // 3. FIND THE ITEM IN INVENTORY (Stock Place)
+                const inventoryItem = await db.inventory.where('name').equals(record.item).first();
+                
+                if (inventoryItem) {
+                    // 4. REFILL THE STOCK (9 + 1 = 10)
+                    const newQty = (inventoryItem.qty || 0) + (record.qty || 0);
+                    await db.inventory.update(inventoryItem.id, { qty: newQty });
+                }
+            }
+        }
+
+        // 5. YOUR ORIGINAL CODE (Stays exactly the same)
         await db.records.delete(id); 
         refreshReportDisplay(); 
         refreshDashboardMetrics();
@@ -781,33 +802,18 @@ async function modifyStock(id) {
         syncToCloud();
     }
 }
-   async function changeGlobalTab(tabID) {
-    // 1. THE SCROLL FIX: Jumps to top instantly
-    window.scrollTo({ top: 0, behavior: 'instant' }); 
+    async function changeGlobalTab(tabID) {
+    // THIS LINE JUMPS THE PAGE TO THE TOP IMMEDIATELY WHEN TAB CHANGES
+    window.scrollTo(0, 0);
 
-    // 2. HIDE ALL SECTIONS
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
-    
-    // 3. SHOW SELECTED SECTION
-    const targetSection = document.getElementById(tabID);
-    if (targetSection) {
-        targetSection.classList.remove('hidden');
-    }
-
-    // 4. UPDATE NAV BUTTON STYLE
+    document.getElementById(tabID).classList.remove('hidden');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const navMap = {dashboard:'das', 'sales-entry':'sal', inventory:'inv', records:'rec'};
     
-    // Safety Check: Only add 'active' if the button exists
-    const activeBtn = document.getElementById('btn-' + navMap[tabID]);
-    if(activeBtn) {
-        activeBtn.classList.add('active');
-    }
+    const navMap = {dashboard:'das', 'sales-entry':'sal', inventory:'inv', records:'rec'};
+    document.getElementById('btn-' + navMap[tabID]).classList.add('active');
 
-    // 5. RUN TAB-SPECIFIC LOGIC
-    if(tabID === 'dashboard') {
-        refreshDashboardMetrics();
-    }
+    if(tabID === 'dashboard') refreshDashboardMetrics();
     
     if(tabID === 'records') {
         document.getElementById('report-date-input').value = getFormattedToday();
@@ -819,29 +825,28 @@ async function modifyStock(id) {
     if(tabID === 'sales-entry') {
         document.getElementById('sale-date').value = getFormattedToday();
         const invItems = await db.inventory.toArray();
-        const dataList = document.getElementById('stock-datalist');
-        if(dataList) {
-            dataList.innerHTML = invItems.map(i => `<option value="${i.name}">`).join('');
-        }
+        document.getElementById('stock-datalist').innerHTML = invItems.map(i => `<option value="${i.name}">`).join('');
     }
 
     if(tabID === 'inventory') {
         switchInventorySubTab('acc');
     }
 }
-async function switchInventorySubTab(tab) {
-    document.querySelectorAll('#inventory .sub-nav button').forEach(b => b.classList.remove('active'));
-    // Ensure the button exists before adding active class
-    const btn = document.getElementById('inv-tab-' + tab);
-    if(btn) btn.classList.add('active');
 
+async function switchInventorySubTab(tab) {
+
+    document.querySelectorAll('#inventory .sub-nav button').forEach(b => b.classList.remove('active'));
+
+    // Ensure the button exists before adding active class
+
+    const btn = document.getElementById('inv-tab-' + tab);
+
+    if(btn) btn.classList.add('active');
     document.getElementById('inv-list-container').className = (tab === 'add') ? 'hidden' : '';
     document.getElementById('inv-add-container').className = (tab === 'add') ? '' : 'hidden';
-    
     // This is the part that actually draws the list on screen
     if(tab !== 'add') refreshInventoryDisplay(tab);
 }
-
     function generatePDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
