@@ -106,6 +106,22 @@
     text-align: center !important;
     white-space: nowrap;
 }
+/* FIX FOR GENERATE PDF BUTTON ON MOBILE */
+    #generate-pdf-btn {
+        display: block !important;
+        width: 85% !important; 
+        margin: 20px auto !important;
+        position: relative !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        
+        /* NEW ADDITIONS FOR MOBILE TEXT */
+        white-space: normal !important; /* Allows text to go to 2 lines if needed */
+        line-height: 1.4 !important;    /* Adds space between lines */
+        height: auto !important;        /* Let the button grow taller for the text */
+        padding: 15px 10px !important;  /* Balanced padding */
+        min-height: 50px;
+    }
 
     /* 7. ELITE GRID & INPUTS */
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
@@ -862,4 +878,3 @@ document.getElementById('report-date-input').setAttribute('max', new Date().toIS
 </script>
 </body>
 </html>
-
