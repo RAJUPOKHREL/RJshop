@@ -106,21 +106,27 @@
     text-align: center !important;
     white-space: nowrap;
 }
-/* FIX FOR GENERATE PDF BUTTON ON MOBILE */
+/* FIX FOR PDF BUTTON ONLY */
     #generate-pdf-btn {
+        background: white !important; 
+        color: #1a1a1a !important; /* Dark text for white background */
+        border: 2px solid #e2e8f0 !important;
+        
+        /* CENTER IT LIKE THE OTHERS */
         display: block !important;
-        width: 85% !important; 
+        width: 85% !important;
         margin: 20px auto !important;
         position: relative !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
-        
-        /* NEW ADDITIONS FOR MOBILE TEXT */
-        white-space: normal !important; /* Allows text to go to 2 lines if needed */
-        line-height: 1.4 !important;    /* Adds space between lines */
-        height: auto !important;        /* Let the button grow taller for the text */
-        padding: 15px 10px !important;  /* Balanced padding */
-        min-height: 50px;
+
+        /* MOBILE FIXES */
+        white-space: normal !important; /* Allows text to wrap to 2 lines */
+        height: auto !important;        /* Let button grow with text */
+        padding: 12px 10px !important;  /* Balanced padding */
+        font-size: 13px !important;     /* Slightly smaller for mobile */
+        font-weight: 800 !important;
+        line-height: 1.3 !important;
     }
 
     /* 7. ELITE GRID & INPUTS */
@@ -246,7 +252,7 @@
 </div>
         </div>
         
-        <button class="action-btn" style="background: white; color: var(--dark); border: 2px solid #e2e8f0; font-size:14px; padding:15px;" onclick="generatePDF()">📥 GENERATE BUSINESS PDF</button>
+        <button class="action-btn" onclick="generatePDF()">📥 GENERATE BUSINESS PDF</button>
     </section>
 
     <section id="sales-entry" class="hidden">
