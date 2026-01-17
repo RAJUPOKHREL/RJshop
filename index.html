@@ -86,7 +86,7 @@
     #generate-pdf-btn, .action-btn, .date-pager button, .control-panel button, #pull-btn, .prev-btn, .next-btn { 
         background: transparent !important; 
         color: white !important; 
-		box-shadow : 0 4px 15px rgba(0,0,0,0.3)
+		box-shadow : 0 4px 15px rgba(0,0,0,0.3);
         border: 1px solid rgba(255, 255, 255, 0.3) !important; 
         backdrop-filter: none !important;
         padding: 12px 18px; border-radius: 12px; font-weight: 800; cursor: pointer;
@@ -417,7 +417,8 @@
 </nav>
 
 <script>
-    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwdKHtI0gT9gcfrH74uh6-CqAzezEEUxsanQIxuJKeG00bQVfVxGfb5EuZf6qT3WhCN/exec";
+   // const CLOUD_URL = "https://script.google.com/macros/s/AKfycbwdKHtI0gT9gcfrH74uh6-CqAzezEEUxsanQIxuJKeG00bQVfVxGfb5EuZf6qT3WhCN/exec";//
+   const CLOUD_URL = "https://script.google.com/macros/s/AKfycbyS8vZRM3np2bWoxDODMURulOA9QfepDd8KJIOA6NVnZ9FWn6Gp2D0ugHDuEFyBZNr5/exec";
     const db = new Dexie("EliteShop_Pro_V11_Final");
     
     db.version(1).stores({ 
