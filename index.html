@@ -455,32 +455,24 @@
             dot.style.background = 'var(--success)';
         } catch(e) { dot.style.background = 'var(--danger)'; }
     }
-
-    async function syncFromCloud() {
-
-        if(!confirm("Pull cloud data? This will overwrite local data.")) return;
-
-        try {
-
-            const response = await fetch(CLOUD_URL, { redirect: 'follow' });
-
-            const data = await response.json();
-
-            if(data && data[0][0]) {
-
-                const parsed = JSON.parse(data[0][0]);
-
-               // .put() is the key for the 10 -> 8 update. 
-// It updates the item if the ID matches, instead of crashing.
-await db.records.bulkPut(parsed.records || []); 
-await db.inventory.bulkPut(parsed.inventory || []);
-                location.reload();
-
-            }
-
-        } catch(e) { alert("Error pulling data."); }
-
+    async function syncToCloud() {
+    const dot = document.getElementById('sync-dot');
+    dot.style.background = 'orange'; // Visual "Syncing" state
+    try {
+        const records = await db.records.toArray();
+        const inventory = await db.inventory.toArray();
+        const payload = JSON.stringify([[JSON.stringify({ records, inventory })]]);
+        
+        await fetch(CLOUD_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', // Helps with cross-origin issues on mobile
+            body: payload
+        });
+        dot.style.background = 'var(--success)';
+    } catch(e) { 
+        dot.style.background = 'var(--danger)'; 
     }
+}
 
     // ENTRY LOGIC
     function updateEntryUIVisibility() {
