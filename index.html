@@ -447,7 +447,11 @@
             const records = await db.records.toArray();
             const inventory = await db.inventory.toArray();
             const payload = [[JSON.stringify({ records, inventory })]];
-            await fetch(CLOUD_URL, { method: 'POST', body: JSON.stringify(payload) });
+            await fetch(CLOUD_URL, { 
+    method: 'POST', 
+    body: JSON.stringify(payload),
+    redirect: 'follow' 
+});
             dot.style.background = 'var(--success)';
         } catch(e) { dot.style.background = 'var(--danger)'; }
     }
@@ -458,7 +462,7 @@
 
         try {
 
-            const response = await fetch(CLOUD_URL);
+            const response = await fetch(CLOUD_URL, { redirect: 'follow' });
 
             const data = await response.json();
 
