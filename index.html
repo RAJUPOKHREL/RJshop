@@ -455,22 +455,57 @@
             dot.style.background = 'var(--success)';
         } catch(e) { dot.style.background = 'var(--danger)'; }
     }
-    async function syncToCloud() {
+    async function syncFromCloud() {
     const dot = document.getElementById('sync-dot');
-    dot.style.background = 'orange'; // Visual "Syncing" state
+    dot.style.background = 'orange';
+
+    // 1. Setup Timeout - If Google doesn't respond in 10 seconds, stop trying
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); 
+
     try {
-        const records = await db.records.toArray();
-        const inventory = await db.inventory.toArray();
-        const payload = JSON.stringify([[JSON.stringify({ records, inventory })]]);
+        // 2. Cache Buster - Adds a unique number to the URL so you always get FRESH data
+        const url = CLOUD_URL + "?t=" + new Date().getTime();
         
-        await fetch(CLOUD_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', // Helps with cross-origin issues on mobile
-            body: payload
+        const response = await fetch(url, {
+            method: 'GET',
+            signal: controller.signal,
+            redirect: 'follow'
         });
-        dot.style.background = 'var(--success)';
-    } catch(e) { 
-        dot.style.background = 'var(--danger)'; 
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error('Network error');
+
+        const data = await response.json();
+
+        // 3. Data Validation - Ensuring the data[0][0] format from your script is met
+        if (data && data[0] && data[0][0]) {
+            const parsed = JSON.parse(data[0][0]);
+
+            // Clear local Dexie DB before importing the Master Cloud copy
+            await db.records.clear();
+            await db.inventory.clear();
+            
+            await db.records.bulkPut(parsed.records || []); 
+            await db.inventory.bulkPut(parsed.inventory || []);
+            
+            dot.style.background = 'var(--success)';
+            console.log("Cloud Sync Successful");
+            
+            // Only reload if we are not already on the dashboard to prevent loops
+            if(document.getElementById('dashboard').classList.contains('hidden')) {
+                location.reload();
+            } else {
+                refreshDashboardMetrics();
+            }
+        }
+    } catch (e) {
+        dot.style.background = 'var(--danger)';
+        console.error("Sync failed:", e);
+        if (e.name === 'AbortError') {
+            alert("Sync Timed Out. Please check your internet connection.");
+        }
     }
 }
 
@@ -889,6 +924,13 @@ async function switchInventorySubTab(tab) {
     changeGlobalTab('dashboard');
 	// This prevents picking future dates from the calendar popup
 document.getElementById('report-date-input').setAttribute('max', new Date().toISOString().split('T')[0]);
+// Automatically pull data from Google Sheets whenever the app starts
+window.addEventListener('load', () => {
+    // Small delay to ensure Dexie DB is ready
+    setTimeout(() => {
+        syncFromCloud();
+    }, 1000);
+});
 </script>
 </body>
 </html>
