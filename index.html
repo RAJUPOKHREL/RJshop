@@ -453,17 +453,29 @@
     }
 
     async function syncFromCloud() {
+
         if(!confirm("Pull cloud data? This will overwrite local data.")) return;
+
         try {
+
             const response = await fetch(CLOUD_URL);
+
             const data = await response.json();
+
             if(data && data[0][0]) {
+
                 const parsed = JSON.parse(data[0][0]);
-                await db.records.clear(); await db.inventory.clear();
-                await db.records.bulkAdd(parsed.records); await db.inventory.bulkAdd(parsed.inventory);
+
+               // .put() is the key for the 10 -> 8 update. 
+// It updates the item if the ID matches, instead of crashing.
+await db.records.bulkPut(parsed.records || []); 
+await db.inventory.bulkPut(parsed.inventory || []);
                 location.reload();
+
             }
+
         } catch(e) { alert("Error pulling data."); }
+
     }
 
     // ENTRY LOGIC
@@ -884,6 +896,3 @@ document.getElementById('report-date-input').setAttribute('max', new Date().toIS
 </script>
 </body>
 </html>
-
-
-
