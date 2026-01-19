@@ -786,7 +786,7 @@ alert("Added!");
 
     refreshReportDisplay();
 }
-    async function refreshReportDisplay() {
+   async function refreshReportDisplay() {
     let raw = await db.records.toArray();
     
     // 1. Filter by Date
@@ -809,16 +809,29 @@ alert("Added!");
     raw.forEach(r => {
         const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
         if(isValid) { 
-            rev += r.sell; 
-            prof += (r.sell - r.buy); 
+            // Calculations for the Top Summary Bar
+            if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
+                prof -= r.buy; // Expenses reduce total profit
+            } else {
+                rev += r.sell; 
+                prof += (r.sell - r.buy); 
+            }
 
             const key = r.item + "||" + r.cat; 
             if (!groupedData[key]) {
-                groupedData[key] = { ...r, count: 1 }; 
+                // Determine display price for the first entry in group
+                let initialVal = (r.cat === 'Expense' || r.cat === 'ServiceExpense') ? r.buy : r.sell;
+                groupedData[key] = { ...r, count: 1, displayPrice: initialVal }; 
             } else {
                 groupedData[key].qty += r.qty;
-                groupedData[key].sell += r.sell;
                 groupedData[key].count += 1;
+                
+                // Add to the total display price for this group
+                if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
+                    groupedData[key].displayPrice += r.buy;
+                } else {
+                    groupedData[key].displayPrice += r.sell;
+                }
             }
         }
     });
@@ -830,23 +843,28 @@ alert("Added!");
         </div>
     `;
 
-    // 4. Render Grouped Cards with a "Details" button
-    document.getElementById('report-items-list').innerHTML = Object.values(groupedData).reverse().map(r => `
+    // 4. Render Grouped Cards
+    document.getElementById('report-items-list').innerHTML = Object.values(groupedData).reverse().map(r => {
+        const isExp = (r.cat === 'Expense' || r.cat === 'ServiceExpense');
+        return `
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <b>${r.item}</b> <span style="color:var(--warning)">(${r.count} sales)</span><br>
+                    <b>${r.item}</b> <span style="color:var(--warning)">(${r.count})</span><br>
                     <small>Total Qty: ${r.qty} | ${r.cat}</small>
                 </div>
                 <div style="text-align:right">
-                    <b>$${r.sell.toFixed(2)}</b><br>
+                    <b style="${isExp ? 'color:var(--danger)' : ''}">
+                        ${isExp ? '-' : ''}$${r.displayPrice.toFixed(2)}
+                    </b><br>
                     <button onclick="showDetails('${r.item.replace(/'/g, "\\'")}', '${r.cat}')" 
                             style="margin-top:5px; background:var(--primary); border:none; color:white; padding:5px 10px; border-radius:5px; font-size:11px;">
                         View Details
                     </button>
                 </div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
     async function deleteRec(id) {
     if(confirm("Delete this record permanently?")) { 
@@ -944,7 +962,6 @@ async function switchInventorySubTab(tab) {
     if(tab !== 'add') refreshInventoryDisplay(tab);
 }
 async function showDetails(itemName, category) {
-    // Switch View
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
     document.getElementById('detailed-view').classList.remove('hidden');
     
@@ -952,20 +969,75 @@ async function showDetails(itemName, category) {
 
     let raw = await db.records.toArray();
     const d = document.getElementById('report-date-input').value;
-    
-    // Filter specifically for this item
     let filtered = raw.filter(r => r.item === itemName && r.cat === category && r.date === d);
 
-    document.getElementById('detail-list').innerHTML = filtered.reverse().map(r => `
-        <div class="card" style="border-left: 4px solid var(--success);">
-            <div style="display:flex; justify-content:space-between;">
-                <div>
-                    <strong>Qty: ${r.qty}</strong><br>
-                    <small>Price: $${r.sell}</small>
+    // 1. Add Header with Select All and Bulk Delete Button
+    let html = `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:12px; border-radius:12px; margin-bottom:15px; border:1px dashed #555;">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                <input type="checkbox" id="select-all-cb" style="transform:scale(1.2)" onclick="toggleAllDetails(this)"> 
+                <span style="font-weight:bold;">Select All</span>
+            </label>
+            <button id="bulk-delete-btn" class="btn-delete" style="display:none; padding:6px 15px; margin:0;" onclick="deleteSelectedDetails()">
+                Delete Selected (0)
+            </button>
+        </div>
+        <div id="cards-container">
+    `;
+
+    // 2. Individual Cards with Checkboxes
+    html += filtered.reverse().map(r => `
+        <div class="card" style="border-left: 4px solid var(--success); display:flex; align-items:center; gap:15px;">
+            <input type="checkbox" class="row-checkbox" value="${r.id}" style="transform:scale(1.2)" onclick="updateBulkBtn()">
+            <div style="flex-grow:1;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>Qty: ${r.qty}</strong><br>
+                        <small>Price: $${r.sell.toFixed(2)}</small>
+                    </div>
+                    <button class="btn-delete" style="padding:4px 10px; font-size:11px;" onclick="confirmDeleteDetail(${r.id})">Delete</button>
                 </div>
-                <button class="btn-delete" onclick="confirmDeleteDetail(${r.id})">Delete</button>
             </div>
         </div>`).join('');
+
+    document.getElementById('detail-list').innerHTML = html + `</div>`;
+}
+// Function to check/uncheck all boxes
+function toggleAllDetails(master) {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    updateBulkBtn();
+}
+
+// Function to show/hide the big delete button and update the count
+function updateBulkBtn() {
+    const selected = document.querySelectorAll('.row-checkbox:checked');
+    const btn = document.getElementById('bulk-delete-btn');
+    if (selected.length > 0) {
+        btn.style.display = 'block';
+        btn.innerText = `Delete Selected (${selected.length})`;
+    } else {
+        btn.style.display = 'none';
+        document.getElementById('select-all-cb').checked = false;
+    }
+}
+
+// Function to delete multiple items at once
+async function deleteSelectedDetails() {
+    const selectedCbs = document.querySelectorAll('.row-checkbox:checked');
+    const idsToDelete = Array.from(selectedCbs).map(cb => parseInt(cb.value));
+
+    if (confirm(`Delete ${idsToDelete.length} selected records? Stock will be restored for each.`)) {
+        // We use a loop to call your existing deleteRec so stock is updated correctly for each item
+        for (let id of idsToDelete) {
+            await deleteRec(id);
+        }
+        
+        // Go back to the main report and refresh everything
+        changeGlobalTab('records');
+        if(typeof refreshReportDisplay === "function") refreshReportDisplay();
+        alert("Selected records deleted successfully.");
+    }
 }
 
 async function confirmDeleteDetail(id) {
