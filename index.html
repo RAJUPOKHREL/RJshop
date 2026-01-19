@@ -450,20 +450,30 @@
     // CLOUD SYNC LOGIC
    async function syncToCloud() {
     const dot = document.getElementById('sync-dot');
-    dot.style.background = 'orange'; // Visual indicator
+    dot.style.background = 'orange'; 
     try {
         const records = await db.records.toArray();
         const inventory = await db.inventory.toArray();
-        const payload = [[JSON.stringify({ records, inventory })]];
+        
+        // 1. We create the first row containing your Stocks (Inventory)
+        // We use a "type" tag so the load function knows this row is special
+        let payload = [[JSON.stringify({ type: 'inventory_header', inventory })]];
+        
+        // 2. We push every single sale record into its own row
+        // This spreads the data out so Google Cells never hit their limit
+        records.forEach(r => {
+            payload.push([JSON.stringify(r)]);
+        });
         
         await fetch(CLOUD_URL, { 
             method: 'POST', 
-            mode: 'no-cors', // CRITICAL for mobile data/internet
+            mode: 'no-cors', 
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload)
         });
         
         dot.style.background = 'var(--success)';
+        console.log("Sync Success: " + records.length + " records saved row-by-row.");
     } catch(e) { 
         console.error("Sync to Cloud failed:", e);
         dot.style.background = 'var(--danger)'; 
@@ -474,7 +484,7 @@
     dot.style.background = 'orange';
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased to 15s for slower mobile data
+    const timeoutId = setTimeout(() => controller.abort(), 15000); 
 
     try {
         const url = CLOUD_URL + "?t=" + new Date().getTime();
@@ -482,32 +492,53 @@
         const response = await fetch(url, {
             method: 'GET',
             signal: controller.signal,
-            redirect: 'follow' // Required for Google Scripts
+            redirect: 'follow'
         });
 
         clearTimeout(timeoutId);
 
         if (!response.ok) throw new Error('Network error');
-        const data = await response.json();
+        const rows = await response.json(); // This is now an array of many rows
 
-        if (data && data[0] && data[0][0]) {
-            const parsed = JSON.parse(data[0][0]);
+        if (rows && rows.length > 0) {
+            let cloudRecords = [];
+            let cloudInventory = [];
 
+            // 1. Loop through every row and parse the content
+            rows.forEach(row => {
+                if (row[0]) {
+                    try {
+                        const content = JSON.parse(row[0]);
+                        // Check if it's the Inventory Row
+                        if (content.type === 'inventory_header') {
+                            cloudInventory = content.inventory || [];
+                        } else {
+                            // Otherwise, it's an individual Record
+                            cloudRecords.push(content);
+                        }
+                    } catch(err) {
+                        console.error("Skipping corrupted row:", err);
+                    }
+                }
+            });
+
+            // 2. Clear local DB and fill with the new row-based data
             await db.records.clear();
             await db.inventory.clear();
-            await db.records.bulkPut(parsed.records || []); 
-            await db.inventory.bulkPut(parsed.inventory || []);
+            
+            if (cloudRecords.length > 0) await db.records.bulkPut(cloudRecords);
+            if (cloudInventory.length > 0) await db.inventory.bulkPut(cloudInventory);
             
             dot.style.background = 'var(--success)';
             
-            // FIX: Instead of reloading the whole page (which causes the loop),
-            // we just refresh the UI parts that are visible.
+            // 3. Refresh UI
             refreshDashboardMetrics();
             refreshReportDisplay();
             const invContainer = document.getElementById('inventory');
             if(invContainer && !invContainer.classList.contains('hidden')) {
                 refreshInventoryDisplay('acc');
             }
+            console.log(`Cloud data loaded: ${cloudRecords.length} records.`);
         }
     } catch (e) {
         dot.style.background = 'var(--danger)';
