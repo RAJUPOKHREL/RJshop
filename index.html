@@ -667,12 +667,11 @@ alert("Added!");
     }
 
     // DASHBOARD & REPORT REFRESH
-    async function refreshDashboardMetrics() {
+   async function refreshDashboardMetrics() {
     let from = document.getElementById('dash-from').value;
     let to = document.getElementById('dash-to').value;
     
-    // 1. IMPROVEMENT: If no date is selected, default to TODAY 
-    // This stops it from showing $0 or "Total History" on startup
+    // Feature: Default to Today if no range selected
     if(!from || !to) {
         const today = new Date().toISOString().split('T')[0];
         from = today;
@@ -682,56 +681,67 @@ alert("Added!");
     let allRecs = await db.records.toArray();
     const inv = await db.inventory.toArray();
     
-    // Filter by Date
+    // Filtered records for current view
     let filteredRecs = allRecs.filter(r => r.date >= from && r.date <= to);
 
     let totalRevenue = 0;
     let serviceExpense = 0;
     let generalExpense = 0;
-    let totalStockInvested = 0; 
-    let currentInventoryValue = 0; 
+    let costOfGoodsSold_Filtered = 0;
 
-    // CALCULATE FROM FILTERED RECORDS
+    // 1. CALCULATE VIEW METRICS
     filteredRecs.forEach(r => {
         if(r.cat === 'Expense') {
             generalExpense += (r.buy || 0); 
+        } else if (r.cat === 'ServiceExpense') {
+            serviceExpense += (r.buy || 0);
         } else if (r.cat === 'Repair') {
+            // Repair "buy" is considered a service expense (parts/labor cost)
             serviceExpense += (r.buy || 0);
             totalRevenue += (r.sell || 0);
         } else {
+            // Standard Phone/Accessory sales
             totalRevenue += (r.sell || 0);
+            costOfGoodsSold_Filtered += (r.buy || 0);
         }
     });
 
-    // CALCULATE FROM INVENTORY
+    // 2. STOCK CALCULATIONS
+    let currentInventoryValue = 0;
     inv.forEach(i => {
-        currentInventoryValue += (i.buy * i.qty);
-        totalStockInvested += (i.buy * (i.qty + (i.sold || 0)));
+        currentInventoryValue += (i.buy * (parseInt(i.qty) || 0));
     });
 
-    // MATH FOR SUMMARY
-    let cashInHand = totalRevenue - generalExpense - serviceExpense;
-    
-    let costOfSoldItems = 0;
-    filteredRecs.forEach(r => {
-        if(r.cat !== 'Expense' && r.cat !== 'Repair') {
-            costOfSoldItems += (r.buy || 0);
+    let totalCostOfAllSoldItems = 0;
+    allRecs.forEach(r => {
+        if(r.cat === 'Accessory' || r.cat === 'Phone') {
+            totalCostOfAllSoldItems += (r.buy || 0);
         }
     });
 
-    let netProfit = totalRevenue - costOfSoldItems - generalExpense - serviceExpense;
+    // Rule: Total Invested includes current stock + items already sold
+    let totalStockInvested = currentInventoryValue + totalCostOfAllSoldItems;
 
-    // 2. UPDATE TOP BOXES (The parts that were missing)
+    // --- 3. THE FIXED MATH (EXACTLY AS REQUESTED) ---
+    
+    // Net Profit = Total Revenue - Cost of stocks sold
+    let netProfit = totalRevenue - costOfGoodsSold_Filtered;
+    
+    // Cash in Hand = Profit - Both Expenses (Service + General)
+    let cashInHand = netProfit - (serviceExpense + generalExpense); 
+
+    // UPDATE UI
     document.getElementById('dash-sales').innerText = `$${totalRevenue.toFixed(2)}`;
     document.getElementById('dash-profit').innerText = `$${netProfit.toFixed(2)}`;
+    document.getElementById('dash-cash').innerText = `$${cashInHand.toFixed(2)}`;
 
-    // 3. YOUR ORIGINAL UI UPDATES (Stayed exactly the same)
+    // Total Invested vs Current Inventory
     document.getElementById('fin-total-invest').innerText = `$${totalStockInvested.toFixed(2)}`;
     document.getElementById('fin-invest').innerText = `$${currentInventoryValue.toFixed(2)}`;
+    
     document.getElementById('fin-serv-exp').innerText = `$${serviceExpense.toFixed(2)}`;
     document.getElementById('fin-gen-exp').innerText = `$${generalExpense.toFixed(2)}`;
     document.getElementById('fin-earn').innerText = `$${totalRevenue.toFixed(2)}`;
-    document.getElementById('dash-cash').innerText = `$${cashInHand.toFixed(2)}`;
     document.getElementById('fin-net').innerText = `$${netProfit.toFixed(2)}`;
 }
 
