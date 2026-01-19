@@ -169,6 +169,15 @@
         accent-color: var(--success); /* Makes the check mark green */
         vertical-align: middle;
     }
+	@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spinning {
+    display: inline-block; /* Required for rotation to work */
+    animation: spin 0.5s linear infinite;
+}
 </style>
 </head>
 <body>
@@ -176,7 +185,9 @@
 <div class="header">
     <h1 style="font-size: 22px; margin:0; font-weight: 950; letter-spacing: -1.2px;">ELITE SHOP PRO</h1>
     <div style="display:flex; align-items:center; gap:15px;">
-        <button class="sync-btn" onclick="syncFromCloud()">🔄 PULL</button>
+        <button onclick="syncFromCloud()">
+    <span id="pull-icon" style="display:inline-block;">🔄</span> Pull Data
+</button>
         <div class="status-dot" id="sync-dot"></div>
     </div>
 </div>
@@ -479,16 +490,19 @@
         dot.style.background = 'var(--danger)'; 
     }
 }
-    async function syncFromCloud() {
+   async function syncFromCloud() {
     const dot = document.getElementById('sync-dot');
     dot.style.background = 'orange';
+
+    // --- TARGET ONLY THE EMOJI ---
+    const icon = document.getElementById('pull-icon');
+    if (icon) icon.classList.add('spinning');
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); 
 
     try {
         const url = CLOUD_URL + "?t=" + new Date().getTime();
-        
         const response = await fetch(url, {
             method: 'GET',
             signal: controller.signal,
@@ -498,22 +512,19 @@
         clearTimeout(timeoutId);
 
         if (!response.ok) throw new Error('Network error');
-        const rows = await response.json(); // This is now an array of many rows
+        const rows = await response.json(); 
 
         if (rows && rows.length > 0) {
             let cloudRecords = [];
             let cloudInventory = [];
 
-            // 1. Loop through every row and parse the content
             rows.forEach(row => {
                 if (row[0]) {
                     try {
                         const content = JSON.parse(row[0]);
-                        // Check if it's the Inventory Row
                         if (content.type === 'inventory_header') {
                             cloudInventory = content.inventory || [];
                         } else {
-                            // Otherwise, it's an individual Record
                             cloudRecords.push(content);
                         }
                     } catch(err) {
@@ -522,7 +533,6 @@
                 }
             });
 
-            // 2. Clear local DB and fill with the new row-based data
             await db.records.clear();
             await db.inventory.clear();
             
@@ -531,18 +541,19 @@
             
             dot.style.background = 'var(--success)';
             
-            // 3. Refresh UI
             refreshDashboardMetrics();
             refreshReportDisplay();
             const invContainer = document.getElementById('inventory');
             if(invContainer && !invContainer.classList.contains('hidden')) {
                 refreshInventoryDisplay('acc');
             }
-            console.log(`Cloud data loaded: ${cloudRecords.length} records.`);
         }
     } catch (e) {
         dot.style.background = 'var(--danger)';
         console.error("Sync failed:", e);
+    } finally {
+        // --- STOP ONLY THE EMOJI ---
+        if (icon) icon.classList.remove('spinning');
     }
 }
 
