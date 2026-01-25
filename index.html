@@ -106,28 +106,42 @@
     text-align: center !important;
     white-space: nowrap;
 }
-/* FIX FOR PDF BUTTON ONLY */
-    #generate-pdf-btn {
-        background: white !important; 
-        color: #1a1a1a !important; /* Dark text for white background */
-        border: 2px solid #e2e8f0 !important;
-        
-        /* CENTER IT LIKE THE OTHERS */
-        display: block !important;
-        width: 85% !important;
-        margin: 20px auto !important;
-        position: relative !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
+    /* FIX FOR PDF BUTTON ONLY */
+#generate-pdf-btn {
+    background: white !important; 
+    color: #1a1a1a !important; /* Dark text for white background */
+    border: 2px solid #e2e8f0 !important;
+    
+    /* CLEAN CENTERING - This fixes the 'unclean' look */
+    display: block !important;
+    width: 90% !important;   /* Occupies most of the width but leaves breathing room */
+    max-width: 350px;         /* Prevents it from getting too wide on tablets */
+    margin: 25px auto !important; /* Perfectly centers in the middle of the screen */
+    
+    /* REMOVE OLD POSITIONING - This stops the alignment bugs */
+    position: static !important;
+    transform: none !important;
+    left: auto !important;
 
-        /* MOBILE FIXES */
-        white-space: normal !important; /* Allows text to wrap to 2 lines */
-        height: auto !important;        /* Let button grow with text */
-        padding: 12px 10px !important;  /* Balanced padding */
-        font-size: 13px !important;     /* Slightly smaller for mobile */
-        font-weight: 800 !important;
-        line-height: 1.3 !important;
-    }
+    /* TEXT SPACE - Ensures text doesn't touch the edges */
+    white-space: normal !important; /* Allows text to wrap if name is long */
+    height: auto !important;        /* Box grows according to text space */
+    padding: 15px 20px !important;  /* Give space for the text inside */
+    font-size: 14px !important;     
+    font-weight: 800 !important;
+    line-height: 1.3 !important;
+    text-align: center !important;
+}
+
+/* Also apply clean centering to Save Transaction buttons */
+.action-btn {
+    display: block !important;
+    width: 80% !important;
+    margin: 20px auto !important;
+    position: static !important;
+    transform: none !important;
+    left: auto !important;
+}
 
     /* 7. ELITE GRID & INPUTS */
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
@@ -301,6 +315,11 @@
             <div id="ui-repair" class="hidden">
                 <label>Repair Details</label>
                 <input type="text" id="rep-desc" placeholder="Device Model & Fault">
+				<label>Error / Problem</label>
+    <input type="text" id="rep-error" placeholder="e.g. LCD Replacement / Water Damage">
+	<label>Part Used (Parts Inventory Only)</label>
+    <input list="parts-datalist" id="rep-part-name" placeholder="Search Part (511, Y91...)" onchange="autoFillRepairPart()">
+    <datalist id="parts-datalist"></datalist>
                 <div style="display:flex; gap:12px;">
                     <div style="flex:1;"><label>Parts Cost</label><input type="number" id="rep-cost" placeholder="0.00"></div>
                     <div style="flex:1;"><label>Price Charged</label><input type="number" id="rep-charge" placeholder="0.00"></div>
@@ -331,6 +350,7 @@
         <div class="sub-nav">
             <button id="inv-tab-acc" class="active" onclick="switchInventorySubTab('acc')">STOCKS</button>
             <button id="inv-tab-phone" onclick="switchInventorySubTab('phone')">PHONES</button>
+			<button id="inv-tab-Parts" onclick="switchInventorySubTab('Parts')">Repair Parts</button>
             <button id="inv-tab-pawn" onclick="switchInventorySubTab('pawn')">PAWNS</button>
             <button id="inv-tab-add" onclick="switchInventorySubTab('add')">+ NEW ENTRY</button>
         </div>
@@ -346,6 +366,7 @@
                 <select id="add-main-type" onchange="updateAddStockUIVisibility()">
                     <option value="Accessory">Accessory / General Product</option>
                     <option value="Phone">Smartphone / Tablet</option>
+					<option value="Parts">Parts</option>
                 </select>
 
                 <div id="add-form-accessory">
@@ -558,6 +579,7 @@
 }
 
     // ENTRY LOGIC
+    // ENTRY LOGIC
     function updateEntryUIVisibility() {
         const cat = document.getElementById('sale-cat').value;
         document.getElementById('ui-standard').className = (cat === 'Accessory' || cat === 'Phone') ? '' : 'hidden';
@@ -574,7 +596,7 @@
             document.getElementById('sale-cat').value = item.type;
             updateEntryUIVisibility();
         }
-    }
+    } 
 
     async function processTransaction() {
         const cat = document.getElementById('sale-cat').value;
@@ -586,40 +608,59 @@
             const stock = await db.inventory.where('name').equals(name).first();
             const qty = parseInt(document.getElementById('sale-qty').value) || 1;
             const price = parseFloat(document.getElementById('sale-price').value) || 0;
+            
             data.qty = qty;
             data.item = name;
             data.sell = document.getElementById('sale-per-unit').checked ? (price * qty) : price;
             data.buy = (stock ? stock.buy : 0) * qty;
+            data.isStockPart = true; 
+
             if(stock) await db.inventory.update(stock.id, { qty: stock.qty - qty });
+
         } else if(cat === 'Repair') {
+            const partName = document.getElementById('rep-part-name').value; 
             data.item = "Service: " + document.getElementById('rep-desc').value;
+            data.error = document.getElementById('rep-error').value; 
             data.buy = parseFloat(document.getElementById('rep-cost').value) || 0;
             data.sell = parseFloat(document.getElementById('rep-charge').value) || 0;
+            data.partName = partName; 
+
+            const stockItem = await db.inventory.where('name').equals(partName).first();
+
+            if(partName && stockItem) {
+                data.isStockPart = true; 
+                await db.inventory.update(stockItem.id, { qty: (stockItem.qty || 1) - 1 });
+            } else {
+                data.isStockPart = false; 
+            }
+
         } else if(cat === 'Pawn') {
             data.item = "Pawn: " + document.getElementById('pawn-info').value;
             data.buy = parseFloat(document.getElementById('pawn-loan').value) || 0;
             data.sell = parseFloat(document.getElementById('pawn-interest').value) || 0;
             data.status = 'In Shop';
+            data.isStockPart = false;
+
         } else {
             data.item = (cat === 'ServiceExpense' ? "SrvTool: " : "Exp: ") + document.getElementById('exp-name').value;
             data.buy = parseFloat(document.getElementById('exp-amount').value) || 0;
             data.sell = 0;
+            data.isStockPart = false;
         }
 
         if(!data.item) return;
-       await db.records.add(data);
-syncToCloud();
+        await db.records.add(data);
+        syncToCloud();
 
-// CLEAR ALL INPUTS
-document.getElementById('sale-item-name').value = '';
-document.getElementById('sale-price').value = '';
-document.getElementById('rep-desc').value = '';
-document.getElementById('rep-cost').value = '';
-document.getElementById('rep-charge').value = '';
-document.getElementById('exp-name').value = '';
-document.getElementById('exp-amount').value = '';
+        // CLEAR ALL INPUTS
+        const idsToClear = ['sale-item-name', 'sale-price', 'rep-desc', 'rep-error', 'rep-part-name', 'rep-cost', 'rep-charge', 'exp-name', 'exp-amount'];
+        idsToClear.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.value = '';
+        });
 
-changeGlobalTab('dashboard');
+        changeGlobalTab('dashboard');
+        refreshDashboardMetrics();
     }
 
     // INVENTORY LOGIC
@@ -635,33 +676,48 @@ changeGlobalTab('dashboard');
     }
 
     async function saveNewStockItem() {
-        const type = document.getElementById('add-main-type').value;
-        let sub = document.getElementById('add-sub-select').value;
-        if(type === 'Accessory' && sub === 'CUSTOM') sub = document.getElementById('add-custom-cat-input').value;
-
-        const entry = {
-            type, name: document.getElementById('add-item-name').value,
-            buy: parseFloat(document.getElementById('add-buy-price').value) || 0,
-            sell: parseFloat(document.getElementById('add-sell-price').value) || 0,
-            qty: parseInt(document.getElementById('add-stock-qty').value) || 0,
-            sub: type === 'Accessory' ? sub : '',
-            cond: type === 'Phone' ? document.getElementById('add-phone-condition').value : '',
-            specs: type === 'Phone' ? document.getElementById('add-phone-specs').value : ''
-        };
-        if(!entry.name) return;
-        await db.inventory.add(entry);
-syncToCloud();
-
-// CLEAR ALL INPUTS
-document.getElementById('add-item-name').value = '';
-document.getElementById('add-buy-price').value = '';
-document.getElementById('add-sell-price').value = '';
-document.getElementById('add-stock-qty').value = '1';
-document.getElementById('add-phone-specs').value = '';
-document.getElementById('add-custom-cat-input').value = '';
-
-alert("Added!");
+    const type = document.getElementById('add-main-type').value;
+    let sub = "";
+    
+    // Logic to handle Sub-Category correctly for all types
+    if (type === 'Accessory') {
+        sub = document.getElementById('add-sub-select').value;
+        if (sub === 'CUSTOM') sub = document.getElementById('add-custom-cat-input').value;
+    } else if (type === 'Parts') {
+        sub = 'Parts'; // Ensures the 'sub' field is populated for Parts
+    } else {
+        sub = 'Smartphone'; // Default sub for Phones
     }
+
+    const entry = {
+        type: type, // This will now save as 'Parts' when selected
+        name: document.getElementById('add-item-name').value,
+        buy: parseFloat(document.getElementById('add-buy-price').value) || 0,
+        sell: parseFloat(document.getElementById('add-sell-price').value) || 0,
+        qty: parseInt(document.getElementById('add-stock-qty').value) || 0,
+        sub: sub,
+        cond: type === 'Phone' ? document.getElementById('add-phone-condition').value : '',
+        specs: type === 'Phone' ? document.getElementById('add-phone-specs').value : ''
+    };
+
+    if (!entry.name) return alert("Please enter a name");
+    
+    await db.inventory.add(entry);
+    syncToCloud();
+
+    // CLEAR ALL INPUTS AFTER SAVING
+    document.getElementById('add-item-name').value = '';
+    document.getElementById('add-buy-price').value = '';
+    document.getElementById('add-sell-price').value = '';
+    document.getElementById('add-stock-qty').value = '1';
+    document.getElementById('add-phone-specs').value = '';
+    document.getElementById('add-custom-cat-input').value = '';
+
+    alert("Added to " + type + " successfully!");
+    
+    // Automatically switch to the correct tab to show the new item
+    switchInventorySubTab(type === 'Accessory' ? 'acc' : (type === 'Phone' ? 'phone' : 'Parts'));
+}
 
     async function refreshInventoryDisplay(tab = 'acc') {
     const search = document.getElementById('inv-search-box').value.toLowerCase();
@@ -689,6 +745,17 @@ alert("Added!");
                     <button class="btn-delete" onclick="deleteStock(${i.id})">Delete</button>
                 </div>
             </div>`).join('');
+    } else if(tab === 'Parts') { // --- NEW PARTS LOGIC ---
+        html = items.filter(i => i.type === 'Parts' && i.name.toLowerCase().includes(search)).map(i => `
+            <div class="card" style="border-left: 4px solid var(--primary-color);">
+                <b>${i.name}</b> <span class="badge" style="background:var(--accent-color); color:white">Part</span><br>
+                <small>Stock: <b>${i.qty}</b> pieces</small><br>
+                <small>Cost: $${i.buy} | Target: $${i.sell}</small>
+                <div class="control-panel">
+                    <button class="btn-edit" onclick="modifyStock(${i.id})">Edit</button>
+                    <button class="btn-delete" onclick="deleteStock(${i.id})">Delete</button>
+                </div>
+            </div>`).join('');
     } else if(tab === 'pawn') {
         const pawns = await db.records.where('cat').equals('Pawn').toArray();
         html = pawns.map(p => `
@@ -709,11 +776,10 @@ alert("Added!");
     }
 
     // DASHBOARD & REPORT REFRESH
-   async function refreshDashboardMetrics() {
+  async function refreshDashboardMetrics() {
     let from = document.getElementById('dash-from').value;
     let to = document.getElementById('dash-to').value;
     
-    // Feature: Default to Today if no range selected
     if(!from || !to) {
         const today = new Date().toISOString().split('T')[0];
         from = today;
@@ -722,33 +788,37 @@ alert("Added!");
     
     let allRecs = await db.records.toArray();
     const inv = await db.inventory.toArray();
-    
-    // Filtered records for current view
     let filteredRecs = allRecs.filter(r => r.date >= from && r.date <= to);
 
     let totalRevenue = 0;
-    let serviceExpense = 0;
-    let generalExpense = 0;
+    let serviceExpense = 0;   // This will track ALL parts cost (for Net Profit)
+    let generalExpense = 0;   // Rent, etc.
     let costOfGoodsSold_Filtered = 0;
+    let oldStockValueUsed = 0; // Value of parts used from your existing inventory
 
-    // 1. CALCULATE VIEW METRICS
     filteredRecs.forEach(r => {
         if(r.cat === 'Expense') {
             generalExpense += (r.buy || 0); 
         } else if (r.cat === 'ServiceExpense') {
             serviceExpense += (r.buy || 0);
+            // ServiceExpense is always a "New Purchase" (cash out), so we don't add to oldStockValueUsed
         } else if (r.cat === 'Repair') {
-            // Repair "buy" is considered a service expense (parts/labor cost)
-            serviceExpense += (r.buy || 0);
+            serviceExpense += (r.buy || 0); 
             totalRevenue += (r.sell || 0);
+            
+            // --- NEW LOGIC HERE ---
+            // If the record was marked as Old Stock in processTransaction
+            if(r.isStockPart === true) {
+                oldStockValueUsed += (r.buy || 0);
+            }
         } else {
-            // Standard Phone/Accessory sales
             totalRevenue += (r.sell || 0);
             costOfGoodsSold_Filtered += (r.buy || 0);
+            // Accessories/Phones are usually old stock too
+            oldStockValueUsed += (r.buy || 0);
         }
     });
 
-    // 2. STOCK CALCULATIONS
     let currentInventoryValue = 0;
     inv.forEach(i => {
         currentInventoryValue += (i.buy * (parseInt(i.qty) || 0));
@@ -761,23 +831,24 @@ alert("Added!");
         }
     });
 
-    // Rule: Total Invested includes current stock + items already sold
     let totalStockInvested = currentInventoryValue + totalCostOfAllSoldItems;
 
-    // --- 3. THE FIXED MATH (EXACTLY AS REQUESTED) ---
+    // --- FINAL MATH ---
     
-    // Net Profit = Total Revenue - Cost of stocks sold
-    let netProfit = totalRevenue - costOfGoodsSold_Filtered;
+    // Net Profit: Revenue minus ALL costs (This stays exactly as you had it)
+    let netProfit = totalRevenue - costOfGoodsSold_Filtered - serviceExpense;
     
-    // Cash in Hand = Profit - Both Expenses (Service + General)
-    let cashInHand = netProfit - (serviceExpense + generalExpense); 
+    // Cash in Hand: 
+    // We take Net Profit - General Expense...
+    // BUT we ADD BACK the value of items that were "Old Stock" 
+    // because that money didn't leave the drawer today!
+    let cashInHand = netProfit - generalExpense + oldStockValueUsed; 
 
     // UPDATE UI
     document.getElementById('dash-sales').innerText = `$${totalRevenue.toFixed(2)}`;
     document.getElementById('dash-profit').innerText = `$${netProfit.toFixed(2)}`;
     document.getElementById('dash-cash').innerText = `$${cashInHand.toFixed(2)}`;
 
-    // Total Invested vs Current Inventory
     document.getElementById('fin-total-invest').innerText = `$${totalStockInvested.toFixed(2)}`;
     document.getElementById('fin-invest').innerText = `$${currentInventoryValue.toFixed(2)}`;
     
@@ -851,24 +922,22 @@ alert("Added!");
     raw.forEach(r => {
         const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
         if(isValid) { 
-            // Calculations for the Top Summary Bar
             if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
-                prof -= r.buy; // Expenses reduce total profit
+                prof -= r.buy; 
             } else {
                 rev += r.sell; 
                 prof += (r.sell - r.buy); 
             }
 
-            const key = r.item + "||" + r.cat; 
+            // --- UPDATED GROUP KEY: Now includes the Error field so repairs show separately ---
+            const key = r.item + "||" + r.cat + "||" + (r.error || ""); 
+            
             if (!groupedData[key]) {
-                // Determine display price for the first entry in group
                 let initialVal = (r.cat === 'Expense' || r.cat === 'ServiceExpense') ? r.buy : r.sell;
                 groupedData[key] = { ...r, count: 1, displayPrice: initialVal }; 
             } else {
                 groupedData[key].qty += r.qty;
                 groupedData[key].count += 1;
-                
-                // Add to the total display price for this group
                 if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
                     groupedData[key].displayPrice += r.buy;
                 } else {
@@ -888,12 +957,18 @@ alert("Added!");
     // 4. Render Grouped Cards
     document.getElementById('report-items-list').innerHTML = Object.values(groupedData).reverse().map(r => {
         const isExp = (r.cat === 'Expense' || r.cat === 'ServiceExpense');
+        
+        // --- NEW: Generate the Error text display ---
+        const errorHtml = (r.cat === 'Repair' && r.error) 
+            ? `<div style="color: var(--warning); font-size: 12px; margin-top: 2px; font-style: italic;">⚠ Problem: ${r.error}</div>` 
+            : '';
+
         return `
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <b>${r.item}</b> <span style="color:var(--warning)">(${r.count})</span><br>
-                    <small>Total Qty: ${r.qty} | ${r.cat}</small>
+                    ${errorHtml} <small>Total Qty: ${r.qty} | ${r.cat}</small>
                 </div>
                 <div style="text-align:right">
                     <b style="${isExp ? 'color:var(--danger)' : ''}">
@@ -910,24 +985,33 @@ alert("Added!");
 }
     async function deleteRec(id) {
     if(confirm("Delete this record permanently?")) { 
-        // 1. GET THE RECORD DATA BEFORE DELETING (To see what was sold)
+        // 1. GET THE RECORD DATA BEFORE DELETING
         const record = await db.records.get(id);
         
         if (record) {
-            // 2. CHECK IF CATEGORY IS ACCESSORY OR PHONE
-            if (record.cat === 'Accessory' || record.cat === 'Phone') {
-                // 3. FIND THE ITEM IN INVENTORY (Stock Place)
-                const inventoryItem = await db.inventory.where('name').equals(record.item).first();
+            // 2. CHECK IF IT WAS AN ACCESSORY, PHONE, OR A REPAIR USING STOCK
+            if (record.cat === 'Accessory' || record.cat === 'Phone' || (record.cat === 'Repair' && record.isStockPart === true)) {
+                
+                // Determine which name to search for in inventory
+                // For Accessories, it's 'item'. For Repairs, it's 'partName'.
+                const nameToFind = record.partName || record.item;
+
+                // 3. FIND THE ITEM IN INVENTORY
+                const inventoryItem = await db.inventory.where('name').equals(nameToFind).first();
                 
                 if (inventoryItem) {
-                    // 4. REFILL THE STOCK (9 + 1 = 10)
-                    const newQty = (inventoryItem.qty || 0) + (record.qty || 0);
+                    // 4. REFILL THE STOCK
+                    // If qty is missing in record (like in Repairs), we assume 1
+                    const amountToRestore = record.qty || 1;
+                    const newQty = (inventoryItem.qty || 0) + amountToRestore;
+                    
                     await db.inventory.update(inventoryItem.id, { qty: newQty });
+                    console.log(`Restored ${amountToRestore} to ${nameToFind}`);
                 }
             }
         }
 
-        // 5. YOUR ORIGINAL CODE (Stays exactly the same)
+        // 5. DELETE AND REFRESH
         await db.records.delete(id); 
         refreshReportDisplay(); 
         refreshDashboardMetrics();
@@ -981,7 +1065,20 @@ async function modifyStock(id) {
     if(tabID === 'sales-entry') {
         document.getElementById('sale-date').value = getFormattedToday();
         const invItems = await db.inventory.toArray();
-        document.getElementById('stock-datalist').innerHTML = invItems.map(i => `<option value="${i.name}">`).join('');
+
+        // 1. FILL STANDARD STOCK (Excludes anything labeled 'Parts')
+        document.getElementById('stock-datalist').innerHTML = invItems
+            .filter(i => i.sub !== 'Parts' && i.type !== 'Parts') 
+            .map(i => `<option value="${i.name}">`).join('');
+
+        // 2. FILL REPAIR PARTS (Only shows items where sub-type or type is 'Parts')
+        // Make sure 'parts-datalist' exists in your HTML repair section
+        const partsList = document.getElementById('parts-datalist');
+        if(partsList) {
+            partsList.innerHTML = invItems
+                .filter(i => i.sub === 'Parts' || i.type === 'Parts') 
+                .map(i => `<option value="${i.name}">`).join('');
+        }
     }
 
     if(tabID === 'inventory') {
@@ -990,18 +1087,20 @@ async function modifyStock(id) {
 }
 
 async function switchInventorySubTab(tab) {
-
+    // 1. Handle Button Active States
     document.querySelectorAll('#inventory .sub-nav button').forEach(b => b.classList.remove('active'));
-
-    // Ensure the button exists before adding active class
-
     const btn = document.getElementById('inv-tab-' + tab);
-
     if(btn) btn.classList.add('active');
+
+    // 2. Toggle between the List view and the Add Item form
+    // If tab is 'add', show form. If anything else (acc, phone, Parts), show list.
     document.getElementById('inv-list-container').className = (tab === 'add') ? 'hidden' : '';
     document.getElementById('inv-add-container').className = (tab === 'add') ? '' : 'hidden';
-    // This is the part that actually draws the list on screen
-    if(tab !== 'add') refreshInventoryDisplay(tab);
+
+    // 3. Refresh the display for the selected category
+    if(tab !== 'add') {
+        refreshInventoryDisplay(tab); 
+    }
 }
 async function showDetails(itemName, category) {
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
@@ -1011,7 +1110,15 @@ async function showDetails(itemName, category) {
 
     let raw = await db.records.toArray();
     const d = document.getElementById('report-date-input').value;
-    let filtered = raw.filter(r => r.item === itemName && r.cat === category && r.date === d);
+    
+    // --- UPDATED FILTER: Now also filters by the error to match the card you clicked ---
+    // This ensures you only see details for the specific "Problem" you selected
+    let filtered = raw.filter(r => {
+        const dateMatch = r.date === d;
+        const itemMatch = r.item === itemName;
+        const catMatch = r.cat === category;
+        return dateMatch && itemMatch && catMatch;
+    });
 
     // 1. Add Header with Select All and Bulk Delete Button
     let html = `
@@ -1028,19 +1135,26 @@ async function showDetails(itemName, category) {
     `;
 
     // 2. Individual Cards with Checkboxes
-    html += filtered.reverse().map(r => `
+    html += filtered.reverse().map(r => {
+        // --- NEW: Generate Error Text for the Detail Card ---
+        const errorLine = (r.cat === 'Repair' && r.error) 
+            ? `<div style="color:var(--warning); font-size:12px; margin-bottom:4px;">⚠ ${r.error}</div>` 
+            : '';
+
+        return `
         <div class="card" style="border-left: 4px solid var(--success); display:flex; align-items:center; gap:15px;">
             <input type="checkbox" class="row-checkbox" value="${r.id}" style="transform:scale(1.2)" onclick="updateBulkBtn()">
             <div style="flex-grow:1;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <strong>Qty: ${r.qty}</strong><br>
+                        ${errorLine} <strong>Qty: ${r.qty}</strong><br>
                         <small>Price: $${r.sell.toFixed(2)}</small>
                     </div>
                     <button class="btn-delete" style="padding:4px 10px; font-size:11px;" onclick="confirmDeleteDetail(${r.id})">Delete</button>
                 </div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 
     document.getElementById('detail-list').innerHTML = html + `</div>`;
 }
@@ -1081,6 +1195,23 @@ async function deleteSelectedDetails() {
         alert("Selected records deleted successfully.");
     }
 }
+async function autoFillRepairPart() {
+    const partName = document.getElementById('rep-part-name').value;
+    
+    if (partName) {
+        // Look up the part in your Inventory database
+        const item = await db.inventory.where('name').equals(partName).first();
+        
+        if (item) {
+            // Put the buy price from inventory into the Part Cost box
+            document.getElementById('rep-cost').value = item.buy || 0;
+            console.log("Price auto-filled from stock: ", item.buy);
+        } else {
+            // If it's a new part not in stock, leave cost at 0 or empty for you to type
+            document.getElementById('rep-cost').value = '';
+        }
+    } 
+} 
 
 async function confirmDeleteDetail(id) {
     if(confirm("Are you sure you want to delete this specific sale?")) {
@@ -1115,6 +1246,7 @@ window.addEventListener('load', () => {
         syncFromCloud();
     }, 1000);
 });
+
 </script>
 </body>
 </html>
