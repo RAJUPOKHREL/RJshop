@@ -58,7 +58,7 @@
     .nav-item { background: transparent !important; border: none !important; color: rgba(255, 255, 255, 0.6) !important; padding: 10px 15px; display: flex; flex-direction: column; align-items: center; transition: 0.3s; font-size: 12px; }
     .nav-item.active { color: white !important; background: rgba(255, 255, 255, 0.15) !important; border-radius: 20px; }
 
-    /* 4. CARDS (100% CLARITY - NO BLUR) */
+    /* 4. CARDS */
     .card, .dash-dark-card, .report-summary-card, .date-pager { 
         background: rgba(255, 255, 255, 0.03) !important; 
         backdrop-filter: none !important; 
@@ -66,10 +66,10 @@
         padding: 18px; border-radius: 20px; margin-bottom: 15px; box-sizing: border-box; overflow: hidden;
     }
 
-    /* 5. NEXT / DATE / PREV LAYOUT (FIXED TO ONE LINE) */
+    /* 5. PAGER CONTROLS */
     .pager-controls { 
         display: flex !important; 
-        flex-direction: row !important; /* Forces horizontal line */
+        flex-direction: row !important; 
         align-items: center !important; 
         justify-content: space-between !important; 
         gap: 10px; 
@@ -82,68 +82,54 @@
     }
     .prev-btn, .next-btn { width: auto !important; flex: 0 0 auto !important; }
 
-    /* 6. BUTTONS (100% TRANSPARENT) */
-    #generate-pdf-btn, .action-btn, .date-pager button, .control-panel button, #pull-btn, .prev-btn, .next-btn { 
+    /* 6. BUTTONS (ELITE TRANSPARENT) */
+    .action-btn, .date-pager button, .control-panel button, #pull-btn, .prev-btn, .next-btn { 
         background: transparent !important; 
         color: white !important; 
-		box-shadow : 0 4px 15px rgba(0,0,0,0.3)
+        box-shadow : 0 4px 15px rgba(0,0,0,0.3);
         border: 1px solid rgba(255, 255, 255, 0.3) !important; 
-        backdrop-filter: none !important;
         padding: 12px 18px; border-radius: 12px; font-weight: 800; cursor: pointer;
         transition: 0.3s ease;
     }
-	/* SPECIFICALLY CENTER THE MAIN ACTION BUTTONS */
-.action-btn, #save-inv-btn {
-    display: block !important;
-    width: 50% !important; /* Slightly smaller than full width looks better */
-    margin: 30px auto !important; /* Adds space above and below */
-    
-    /* THE TRICK TO FORCE CENTER */
-    position: relative !important;
-    left: 23% !important;
-    transform: translateX(-50%) !important;
-    
-    text-align: center !important;
-    white-space: nowrap;
-}
-    /* FIX FOR PDF BUTTON ONLY */
-#generate-pdf-btn {
-    background: white !important; 
-    color: #1a1a1a !important; /* Dark text for white background */
-    border: 2px solid #e2e8f0 !important;
-    
-    /* CLEAN CENTERING - This fixes the 'unclean' look */
-    display: block !important;
-    width: 90% !important;   /* Occupies most of the width but leaves breathing room */
-    max-width: 350px;         /* Prevents it from getting too wide on tablets */
-    margin: 25px auto !important; /* Perfectly centers in the middle of the screen */
-    
-    /* REMOVE OLD POSITIONING - This stops the alignment bugs */
-    position: static !important;
-    transform: none !important;
-    left: auto !important;
 
-    /* TEXT SPACE - Ensures text doesn't touch the edges */
-    white-space: normal !important; /* Allows text to wrap if name is long */
-    height: auto !important;        /* Box grows according to text space */
-    padding: 15px 20px !important;  /* Give space for the text inside */
-    font-size: 14px !important;     
-    font-weight: 800 !important;
-    line-height: 1.3 !important;
-    text-align: center !important;
-}
+    /* CENTER MAIN ACTION BUTTONS */
+    .action-btn, #save-inv-btn {
+        display: block !important;
+        width: 80% !important; 
+        margin: 20px auto !important; 
+        position: static !important;
+        transform: none !important;
+        left: auto !important;
+        text-align: center !important;
+    }
 
-/* Also apply clean centering to Save Transaction buttons */
-.action-btn {
-    display: block !important;
-    width: 80% !important;
-    margin: 20px auto !important;
-    position: static !important;
-    transform: none !important;
-    left: auto !important;
-}
+    /* CLEAN BACKUP BUTTON (REPLACED SOLID WHITE WITH ELITE STYLE) */
+    #generate-pdf-btn {
+        background: rgba(255, 255, 255, 0.05) !important; /* Glass effect, not solid white */
+        color: white !important; 
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        box-shadow : 0 4px 15px rgba(0,0,0,0.3);
+        
+        /* Positioning logic kept same as your requested clean look */
+        display: block !important;
+        width: 90% !important;   
+        max-width: 350px;         
+        margin: 25px auto !important; 
+        position: static !important;
+        transform: none !important;
+        left: auto !important;
 
-    /* 7. ELITE GRID & INPUTS */
+        padding: 15px 20px !important;  
+        font-size: 14px !important;      
+        font-weight: 800 !important;
+        line-height: 1.3 !important;
+        text-align: center !important;
+        border-radius: 15px !important;
+        cursor: pointer;
+        text-transform: uppercase;
+    }
+
+    /* 7. GRID & INPUTS */
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
     .mini-stat { 
         padding: 20px; border-radius: 22px; display: flex; flex-direction: column;
@@ -164,34 +150,29 @@
     .sub-nav { display: flex; gap: 8px; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 6px; border-radius: 15px; }
     .sub-nav button { flex: 1; border: none; padding: 12px; border-radius: 10px; font-weight: 700; color: white; opacity: 0.5; background: none; }
     .sub-nav button.active { background: var(--primary); opacity: 1; }
-	/* NEW: QUANTITY & PRICE SIDE-BY-SIDE */
-    .sales-row {
-        display: flex;
-        gap: 12px;
-        width: 100%;
-        margin-bottom: 5px;
-    }
-    .sales-row > div {
-        flex: 1;
-    }
 
-    /* NEW: BIGGER CHECKBOX */
-    input[type="checkbox"] {
-        width: 30px !important;
-        height: 30px !important;
-        cursor: pointer;
-        accent-color: var(--success); /* Makes the check mark green */
-        vertical-align: middle;
-    }
-	@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
+    .sales-row { display: flex; gap: 12px; width: 100%; margin-bottom: 5px; }
+    .sales-row > div { flex: 1; }
 
-.spinning {
-    display: inline-block; /* Required for rotation to work */
-    animation: spin 0.5s linear infinite;
-}
+    input[type="checkbox"] { width: 30px !important; height: 30px !important; cursor: pointer; accent-color: var(--success); vertical-align: middle; }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .spinning { display: inline-block; animation: spin 0.5s linear infinite; }
+
+    /* MOBILE SLIDING TABS */
+    .sub-nav, .tab-bar, .sub-tabs {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important; 
+        -webkit-overflow-scrolling: touch;
+        gap: 10px !important;
+        padding: 10px 5px !important;
+        justify-content: flex-start !important;
+        scrollbar-width: none;
+    }
+    .sub-nav::-webkit-scrollbar { display: none; }
+    .sub-nav button { flex: 0 0 auto !important; min-width: 100px; text-align: center; white-space: nowrap; }
+    .container { overflow-x: hidden; }
 </style>
 </head>
 <body>
@@ -277,7 +258,7 @@
 </div>
         </div>
         
-        <button class="action-btn" onclick="generatePDF()">📥 GENERATE BUSINESS PDF</button>
+        <button id="generate-pdf-btn" onclick="generatePDF()">Generate System Backup (.json)</button>
     </section>
 
     <section id="sales-entry" class="hidden">
@@ -776,45 +757,56 @@
     }
 
     // DASHBOARD & REPORT REFRESH
-  async function refreshDashboardMetrics() {
+ async function refreshDashboardMetrics() {
     let from = document.getElementById('dash-from').value;
     let to = document.getElementById('dash-to').value;
+    const todayStr = new Date().toISOString().split('T')[0];
     
-    if(!from || !to) {
-        const today = new Date().toISOString().split('T')[0];
-        from = today;
-        to = today;
-    }
+    // --- CHANGE 1: Default the main filter to All-Time if no date is picked ---
+    let overviewFrom = from || "2020-01-01"; 
+    let overviewTo = to || "2030-12-31";
     
     let allRecs = await db.records.toArray();
     const inv = await db.inventory.toArray();
-    let filteredRecs = allRecs.filter(r => r.date >= from && r.date <= to);
+    
+    // Main filter for the Overview section (All-time by default)
+    let filteredRecs = allRecs.filter(r => r.date >= overviewFrom && r.date <= overviewTo);
+
+    // --- CHANGE 2: Calculate Today's numbers separately for the top boxes ---
+    let todaySales = 0;
+    let todayProfit = 0;
+    allRecs.filter(r => r.date === todayStr).forEach(r => {
+        if(r.cat === 'Expense' || r.cat === 'ServiceExpense') {
+            todayProfit -= (r.buy || 0);
+        } else if (r.cat === 'Repair') {
+            todaySales += (r.sell || 0);
+            todayProfit += ((r.sell || 0) - (r.buy || 0));
+        } else {
+            todaySales += (r.sell || 0);
+            todayProfit += ((r.sell || 0) - (r.buy || 0));
+        }
+    });
 
     let totalRevenue = 0;
-    let serviceExpense = 0;   // This will track ALL parts cost (for Net Profit)
-    let generalExpense = 0;   // Rent, etc.
+    let serviceExpense = 0;
+    let generalExpense = 0;
     let costOfGoodsSold_Filtered = 0;
-    let oldStockValueUsed = 0; // Value of parts used from your existing inventory
+    let oldStockValueUsed = 0;
 
     filteredRecs.forEach(r => {
         if(r.cat === 'Expense') {
             generalExpense += (r.buy || 0); 
         } else if (r.cat === 'ServiceExpense') {
             serviceExpense += (r.buy || 0);
-            // ServiceExpense is always a "New Purchase" (cash out), so we don't add to oldStockValueUsed
         } else if (r.cat === 'Repair') {
             serviceExpense += (r.buy || 0); 
             totalRevenue += (r.sell || 0);
-            
-            // --- NEW LOGIC HERE ---
-            // If the record was marked as Old Stock in processTransaction
             if(r.isStockPart === true) {
                 oldStockValueUsed += (r.buy || 0);
             }
         } else {
             totalRevenue += (r.sell || 0);
             costOfGoodsSold_Filtered += (r.buy || 0);
-            // Accessories/Phones are usually old stock too
             oldStockValueUsed += (r.buy || 0);
         }
     });
@@ -833,25 +825,19 @@
 
     let totalStockInvested = currentInventoryValue + totalCostOfAllSoldItems;
 
-    // --- FINAL MATH ---
-    
-    // Net Profit: Revenue minus ALL costs (This stays exactly as you had it)
+    // --- YOUR FIXED MATH ---
     let netProfit = totalRevenue - costOfGoodsSold_Filtered - serviceExpense;
-    
-    // Cash in Hand: 
-    // We take Net Profit - General Expense...
-    // BUT we ADD BACK the value of items that were "Old Stock" 
-    // because that money didn't leave the drawer today!
     let cashInHand = netProfit - generalExpense + oldStockValueUsed; 
 
     // UPDATE UI
-    document.getElementById('dash-sales').innerText = `$${totalRevenue.toFixed(2)}`;
-    document.getElementById('dash-profit').innerText = `$${netProfit.toFixed(2)}`;
-    document.getElementById('dash-cash').innerText = `$${cashInHand.toFixed(2)}`;
+    // --- CHANGE 3: Top boxes show TODAY only ---
+    document.getElementById('dash-sales').innerText = `$${todaySales.toFixed(2)}`;
+    document.getElementById('dash-profit').innerText = `$${todayProfit.toFixed(2)}`;
 
+    // --- Everything else shows ALL-TIME or your DATE PICKER range ---
+    document.getElementById('dash-cash').innerText = `$${cashInHand.toFixed(2)}`;
     document.getElementById('fin-total-invest').innerText = `$${totalStockInvested.toFixed(2)}`;
     document.getElementById('fin-invest').innerText = `$${currentInventoryValue.toFixed(2)}`;
-    
     document.getElementById('fin-serv-exp').innerText = `$${serviceExpense.toFixed(2)}`;
     document.getElementById('fin-gen-exp').innerText = `$${generalExpense.toFixed(2)}`;
     document.getElementById('fin-earn').innerText = `$${totalRevenue.toFixed(2)}`;
@@ -1227,14 +1213,92 @@ async function deleteAndGoBack(id) {
         changeGlobalTab('records'); // Go back to the main report
     }
 }
-    function generatePDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text("ELITE SHOP PRO BUSINESS REPORT", 20, 20);
-        doc.text("Report Date: " + getFormattedToday(), 20, 30);
-        doc.text("Total Net Profit: " + document.getElementById('fin-net').innerText, 20, 45);
-        doc.save("EliteShop_Report.pdf");
+  async function generatePDF() {
+    try {
+        // 1. Grab every single piece of data
+        const allRecs = await db.records.toArray();
+        const allInv = await db.inventory.toArray();
+        const timestamp = new Date().toLocaleString();
+
+        let totalProfit = 0; // Variable to track total earnings
+
+        // --- 2. CREATE THE HUMAN READABLE REPORT (TXT) ---
+        let report = `==========================================\n`;
+        report += `   ELITE SHOP MANAGER - FULL DATABASE    \n`;
+        report += `   Generated: ${timestamp}               \n`;
+        report += `==========================================\n\n`;
+
+        // SECTION 1: STOCK / INVENTORY
+        report += `[ SECTION 1: CURRENT STOCK ON SHELVES ]\n`;
+        report += `------------------------------------------------------------\n`;
+        report += `${"ITEM NAME".padEnd(25)} | ${"QTY".padEnd(5)} | ${"BUY".padEnd(8)} | ${"SELL"}\n`;
+        report += `------------------------------------------------------------\n`;
+        
+        allInv.forEach(i => {
+            const name = (i.name || "Unknown Item").substring(0, 24);
+            const qty = String(i.qty || 0);
+            const buy = String(i.buy || 0);
+            const sell = String(i.sell || 0);
+            report += `${name.padEnd(25)} | ${qty.padEnd(5)} | $${buy.padEnd(7)} | $${sell}\n`;
+        });
+
+        // SECTION 2: SALES & TRANSACTIONS
+        report += `\n\n[ SECTION 2: ALL SALES & TRANSACTION HISTORY ]\n`;
+        report += `------------------------------------------------------------\n`;
+        report += `${"DATE".padEnd(12)} | ${"CATEGORY".padEnd(10)} | ${"ITEM & ERROR DETAILS".padEnd(30)} | ${"PROFIT"}\n`;
+        report += `------------------------------------------------------------\n`;
+
+        allRecs
+        .filter(r => r.item && r.item.trim() !== "") 
+        .sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0))
+        .forEach(r => {
+            const rDate = (r.date || "N/A").padEnd(12);
+            const rCat = (r.cat || "Other").padEnd(10);
+            
+            // COMBINE MODEL + ERROR
+            let details = r.item || "No Name";
+            if(r.cat === 'Repair' && r.error) {
+                details += ` (${r.error})`; 
+            }
+            
+            const rDetails = details.substring(0, 29).padEnd(30);
+            const profit = (parseFloat(r.sell) || 0) - (parseFloat(r.buy) || 0);
+            totalProfit += profit; // Add to running total
+            
+            report += `${rDate} | ${rCat} | ${rDetails} | $${profit.toFixed(2)}\n`;
+        });
+
+        // --- 3. SUMMARY SECTION ---
+        report += `\n------------------------------------------------------------\n`;
+        report += `TOTAL NET PROFIT: $${totalProfit.toFixed(2)}\n`;
+        report += `------------------------------------------------------------\n`;
+        report += `\n=== END OF REPORT ===`;
+
+        // --- 4. DOWNLOADS ---
+        const fName = typeof getFormattedToday === 'function' ? getFormattedToday() : new Date().toISOString().split('T')[0];
+        
+        // TXT Download
+        const txtBlob = new Blob([report], { type: 'text/plain' });
+        const txtLink = document.createElement('a');
+        txtLink.href = URL.createObjectURL(txtBlob);
+        txtLink.download = `Full_Shop_Report_${fName}.txt`;
+        txtLink.click();
+
+        // JSON Download
+        const backupData = JSON.stringify({ inventory: allInv, records: allRecs, version: "11.0" }, null, 2);
+        const jsonBlob = new Blob([backupData], { type: 'application/json' });
+        const jsonLink = document.createElement('a');
+        jsonLink.href = URL.createObjectURL(jsonBlob);
+        jsonLink.download = `SYSTEM_RESTORE_FILE_${fName}.json`;
+        jsonLink.click();
+
+        alert("Done! Report includes Details and Total Profit.");
+
+    } catch (err) {
+        console.error(err);
+        alert("Export Error: " + err.message);
     }
+}
 
     changeGlobalTab('dashboard');
 	// This prevents picking future dates from the calendar popup
@@ -1250,4 +1314,3 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
-
