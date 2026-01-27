@@ -615,9 +615,11 @@
                 data.isStockPart = false; 
             }
 
-        } else if(cat === 'Pawn') {
+       } else if(cat === 'Pawn') {
             data.item = "Pawn: " + document.getElementById('pawn-info').value;
+            // The loan amount is stored in 'buy' but ignored in profit math
             data.buy = parseFloat(document.getElementById('pawn-loan').value) || 0;
+            // The interest/percentage is stored in 'sell'
             data.sell = parseFloat(document.getElementById('pawn-interest').value) || 0;
             data.status = 'In Shop';
             data.isStockPart = false;
@@ -633,8 +635,12 @@
         await db.records.add(data);
         syncToCloud();
 
-        // CLEAR ALL INPUTS
-        const idsToClear = ['sale-item-name', 'sale-price', 'rep-desc', 'rep-error', 'rep-part-name', 'rep-cost', 'rep-charge', 'exp-name', 'exp-amount'];
+        // CLEAR ALL INPUTS (Added pawn-info, pawn-loan, and pawn-interest here)
+        const idsToClear = [
+            'sale-item-name', 'sale-price', 'rep-desc', 'rep-error', 
+            'rep-part-name', 'rep-cost', 'rep-charge', 'exp-name', 
+            'exp-amount', 'pawn-info', 'pawn-loan', 'pawn-interest'
+        ];
         idsToClear.forEach(id => {
             const el = document.getElementById(id);
             if(el) el.value = '';
@@ -781,6 +787,12 @@
         } else if (r.cat === 'Repair') {
             todaySales += (r.sell || 0);
             todayProfit += ((r.sell || 0) - (r.buy || 0));
+        } else if (r.cat === 'Pawn') {
+            // ONLY count profit for Today if Collected today
+            if(r.status === 'Collected') {
+                todaySales += (r.sell || 0);
+                todayProfit += (r.sell || 0);
+            }
         } else {
             todaySales += (r.sell || 0);
             todayProfit += ((r.sell || 0) - (r.buy || 0));
@@ -803,6 +815,12 @@
             totalRevenue += (r.sell || 0);
             if(r.isStockPart === true) {
                 oldStockValueUsed += (r.buy || 0);
+            }
+        } else if (r.cat === 'Pawn') {
+            // PAWN MATH: Loan (r.buy) is hidden from math. 
+            // Interest (r.sell) only counts if Collected.
+            if(r.status === 'Collected') {
+                totalRevenue += (r.sell || 0);
             }
         } else {
             totalRevenue += (r.sell || 0);
@@ -830,11 +848,8 @@
     let cashInHand = netProfit - generalExpense + oldStockValueUsed; 
 
     // UPDATE UI
-    // --- CHANGE 3: Top boxes show TODAY only ---
     document.getElementById('dash-sales').innerText = `$${todaySales.toFixed(2)}`;
     document.getElementById('dash-profit').innerText = `$${todayProfit.toFixed(2)}`;
-
-    // --- Everything else shows ALL-TIME or your DATE PICKER range ---
     document.getElementById('dash-cash').innerText = `$${cashInHand.toFixed(2)}`;
     document.getElementById('fin-total-invest').innerText = `$${totalStockInvested.toFixed(2)}`;
     document.getElementById('fin-invest').innerText = `$${currentInventoryValue.toFixed(2)}`;
@@ -906,28 +921,44 @@
 
     // 3. Calculate Totals AND Group Items
     raw.forEach(r => {
+        // Only process Pawns if they are Collected
         const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
+        
         if(isValid) { 
             if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
-                prof -= r.buy; 
+                prof -= (r.buy || 0); 
+            } else if (r.cat === 'Pawn') {
+                // --- SPECIAL PAWN MATH ---
+                // Revenue = the interest charged.
+                // Profit = just the interest (since we ignore the loan amount entirely).
+                rev += (r.sell || 0); 
+                prof += (r.sell || 0); 
             } else {
-                rev += r.sell; 
-                prof += (r.sell - r.buy); 
+                // Normal Sales & Repairs
+                rev += (r.sell || 0); 
+                prof += ((r.sell || 0) - (r.buy || 0)); 
             }
 
-            // --- UPDATED GROUP KEY: Now includes the Error field so repairs show separately ---
+            // --- GROUPING LOGIC ---
             const key = r.item + "||" + r.cat + "||" + (r.error || ""); 
             
             if (!groupedData[key]) {
-                let initialVal = (r.cat === 'Expense' || r.cat === 'ServiceExpense') ? r.buy : r.sell;
+                let initialVal;
+                if (r.cat === 'Pawn') {
+                    initialVal = (r.sell || 0); // Show interest as the value for pawns
+                } else {
+                    initialVal = (r.cat === 'Expense' || r.cat === 'ServiceExpense') ? (r.buy || 0) : (r.sell || 0);
+                }
+                
                 groupedData[key] = { ...r, count: 1, displayPrice: initialVal }; 
             } else {
-                groupedData[key].qty += r.qty;
+                groupedData[key].qty += (r.qty || 0);
                 groupedData[key].count += 1;
+                
                 if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
-                    groupedData[key].displayPrice += r.buy;
+                    groupedData[key].displayPrice += (r.buy || 0);
                 } else {
-                    groupedData[key].displayPrice += r.sell;
+                    groupedData[key].displayPrice += (r.sell || 0);
                 }
             }
         }
@@ -944,17 +975,20 @@
     document.getElementById('report-items-list').innerHTML = Object.values(groupedData).reverse().map(r => {
         const isExp = (r.cat === 'Expense' || r.cat === 'ServiceExpense');
         
-        // --- NEW: Generate the Error text display ---
-        const errorHtml = (r.cat === 'Repair' && r.error) 
-            ? `<div style="color: var(--warning); font-size: 12px; margin-top: 2px; font-style: italic;">⚠ Problem: ${r.error}</div>` 
-            : '';
+        // --- Generate Error or Pawn Info text ---
+        let secondaryText = '';
+        if (r.cat === 'Repair' && r.error) {
+            secondaryText = `<div style="color: var(--warning); font-size: 12px; margin-top: 2px; font-style: italic;">⚠ Problem: ${r.error}</div>`;
+        } else if (r.cat === 'Pawn') {
+            secondaryText = `<div style="color: var(--primary); font-size: 11px; margin-top: 2px;">Status: ${r.status} (Interest Only)</div>`;
+        }
 
         return `
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <b>${r.item}</b> <span style="color:var(--warning)">(${r.count})</span><br>
-                    ${errorHtml} <small>Total Qty: ${r.qty} | ${r.cat}</small>
+                    ${secondaryText} <small>Total Qty: ${r.qty} | ${r.cat}</small>
                 </div>
                 <div style="text-align:right">
                     <b style="${isExp ? 'color:var(--danger)' : ''}">
