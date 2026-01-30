@@ -173,6 +173,21 @@
     .sub-nav::-webkit-scrollbar { display: none; }
     .sub-nav button { flex: 0 0 auto !important; min-width: 100px; text-align: center; white-space: nowrap; }
     .container { overflow-x: hidden; }
+	/* Add this to your CSS */
+button, input, select, .card, .tab-btn {
+    touch-action: manipulation;
+}
+
+body {
+    touch-action: pan-x pan-y; /* Allows scrolling but blocks double-tap zoom */
+}
+button {
+    -webkit-user-select: none; /* Safari */
+    user-select: none;         /* Standard */
+}
+input, select, textarea {
+    font-size: 16px !important;
+}
 </style>
 </head>
 <body>
@@ -294,7 +309,9 @@
             </div>
 
             <div id="ui-repair" class="hidden">
-                <label>Repair Details</label>
+			<label>customer name</label>
+				<input type="text" id="rep-customer" placeholder="Customer Name (Optional)" style="margin-top:5px;">
+                <label>Model</label>
                 <input type="text" id="rep-desc" placeholder="Device Model & Fault">
 				<label>Error / Problem</label>
     <input type="text" id="rep-error" placeholder="e.g. LCD Replacement / Water Damage">
@@ -579,76 +596,92 @@
         }
     } 
 
-    async function processTransaction() {
-        const cat = document.getElementById('sale-cat').value;
-        const date = document.getElementById('sale-date').value || getFormattedToday();
-        let data = { date, cat, status: 'Completed', qty: 1 };
+ async function processTransaction() {
+    const cat = document.getElementById('sale-cat').value;
+    const date = document.getElementById('sale-date').value || getFormattedToday();
+    let data = { date, cat, status: 'Completed', qty: 1 };
 
-        if(cat === 'Accessory' || cat === 'Phone') {
-            const name = document.getElementById('sale-item-name').value;
-            const stock = await db.inventory.where('name').equals(name).first();
-            const qty = parseInt(document.getElementById('sale-qty').value) || 1;
-            const price = parseFloat(document.getElementById('sale-price').value) || 0;
-            
-            data.qty = qty;
-            data.item = name;
-            data.sell = document.getElementById('sale-per-unit').checked ? (price * qty) : price;
-            data.buy = (stock ? stock.buy : 0) * qty;
+    // --- 1. ACCESSORIES & PHONES ---
+    if(cat === 'Accessory' || cat === 'Phone') {
+        const name = document.getElementById('sale-item-name').value;
+        const stock = await db.inventory.where('name').equals(name).first();
+        const qty = parseInt(document.getElementById('sale-qty').value) || 1;
+        const price = parseFloat(document.getElementById('sale-price').value) || 0;
+        
+        data.qty = qty;
+        data.item = name;
+        data.sell = document.getElementById('sale-per-unit').checked ? (price * qty) : price;
+        data.buy = (stock ? stock.buy : 0) * qty;
+        data.isStockPart = true; 
+
+        if(stock) await db.inventory.update(stock.id, { qty: stock.qty - qty });
+
+    // --- 2. REPAIRS ---
+    } else if(cat === 'Repair') {
+        const partName = document.getElementById('rep-part-name').value; 
+        
+        data.customer = document.getElementById('rep-customer').value || ""; 
+        data.item = "Service: " + (document.getElementById('rep-desc').value || "Unknown Model");
+        data.error = document.getElementById('rep-error').value; 
+        data.buy = parseFloat(document.getElementById('rep-cost').value) || 0;
+        data.sell = parseFloat(document.getElementById('rep-charge').value) || 0;
+        data.partName = partName; 
+
+        // AUTOMATIC STOCK CHECK (Replaces the need for 'rep-is-stock' checkbox)
+        const stockItem = await db.inventory.where('name').equals(partName).first();
+        if(partName && stockItem) {
             data.isStockPart = true; 
-
-            if(stock) await db.inventory.update(stock.id, { qty: stock.qty - qty });
-
-        } else if(cat === 'Repair') {
-            const partName = document.getElementById('rep-part-name').value; 
-            data.item = "Service: " + document.getElementById('rep-desc').value;
-            data.error = document.getElementById('rep-error').value; 
-            data.buy = parseFloat(document.getElementById('rep-cost').value) || 0;
-            data.sell = parseFloat(document.getElementById('rep-charge').value) || 0;
-            data.partName = partName; 
-
-            const stockItem = await db.inventory.where('name').equals(partName).first();
-
-            if(partName && stockItem) {
-                data.isStockPart = true; 
-                await db.inventory.update(stockItem.id, { qty: (stockItem.qty || 1) - 1 });
-            } else {
-                data.isStockPart = false; 
-            }
-
-       } else if(cat === 'Pawn') {
-            data.item = "Pawn: " + document.getElementById('pawn-info').value;
-            // The loan amount is stored in 'buy' but ignored in profit math
-            data.buy = parseFloat(document.getElementById('pawn-loan').value) || 0;
-            // The interest/percentage is stored in 'sell'
-            data.sell = parseFloat(document.getElementById('pawn-interest').value) || 0;
-            data.status = 'In Shop';
-            data.isStockPart = false;
-
+            await db.inventory.update(stockItem.id, { qty: (stockItem.qty || 1) - 1 });
         } else {
-            data.item = (cat === 'ServiceExpense' ? "SrvTool: " : "Exp: ") + document.getElementById('exp-name').value;
-            data.buy = parseFloat(document.getElementById('exp-amount').value) || 0;
-            data.sell = 0;
-            data.isStockPart = false;
-        }
+            data.isStockPart = false; 
+        } 
 
-        if(!data.item) return;
-        await db.records.add(data);
-        syncToCloud();
+    // --- 3. PAWNS ---
+    } else if(cat === 'Pawn') {
+        data.item = "Pawn: " + (document.getElementById('pawn-info').value || "No Description");
+        data.buy = parseFloat(document.getElementById('pawn-loan').value) || 0;
+        data.sell = parseFloat(document.getElementById('pawn-interest').value) || 0;
+        data.status = 'In Shop';
+        data.isStockPart = false;
 
-        // CLEAR ALL INPUTS (Added pawn-info, pawn-loan, and pawn-interest here)
-        const idsToClear = [
-            'sale-item-name', 'sale-price', 'rep-desc', 'rep-error', 
-            'rep-part-name', 'rep-cost', 'rep-charge', 'exp-name', 
-            'exp-amount', 'pawn-info', 'pawn-loan', 'pawn-interest'
-        ];
-        idsToClear.forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.value = '';
-        });
+    // --- 4. EXPENSES ---
+    } else {
+        data.item = (cat === 'ServiceExpense' ? "SrvTool: " : "Exp: ") + (document.getElementById('exp-name').value || "General Expense");
+        data.buy = parseFloat(document.getElementById('exp-amount').value) || 0;
+        data.sell = 0;
+        data.isStockPart = false;
+    }  
 
-        changeGlobalTab('dashboard');
-        refreshDashboardMetrics();
+    // --- 5. SAVE ---
+    if(!data.item || data.item.trim() === "" || data.item.includes("undefined")) {
+        alert("Please enter item details/model before processing.");
+        return;
     }
+
+    await db.records.add(data);
+    if (typeof syncToCloud === "function") syncToCloud();
+
+    // --- 6. CLEAR ALL INPUTS ---
+    const idsToClear = [
+        'sale-item-name', 'sale-price', 'sale-qty', 
+        'rep-desc', 'rep-error', 'rep-part-name', 'rep-cost', 'rep-charge', 
+        'exp-name', 'exp-amount', 'pawn-info', 'pawn-loan', 'pawn-interest',
+        'rep-customer'
+    ];
+    
+    idsToClear.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            // Reset qty to 1 so the next sale doesn't start at 0 or empty
+            if(id === 'sale-qty') el.value = '1';
+            else el.value = '';
+        }
+    });
+
+    // --- 7. REFRESH ---
+    changeGlobalTab('dashboard');
+    refreshDashboardMetrics();
+}
 
     // INVENTORY LOGIC
     function updateAddStockUIVisibility() {
@@ -921,31 +954,26 @@
 
     // 3. Calculate Totals AND Group Items
     raw.forEach(r => {
-        // Only process Pawns if they are Collected
         const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
         
         if(isValid) { 
             if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
                 prof -= (r.buy || 0); 
             } else if (r.cat === 'Pawn') {
-                // --- SPECIAL PAWN MATH ---
-                // Revenue = the interest charged.
-                // Profit = just the interest (since we ignore the loan amount entirely).
                 rev += (r.sell || 0); 
                 prof += (r.sell || 0); 
             } else {
-                // Normal Sales & Repairs
                 rev += (r.sell || 0); 
                 prof += ((r.sell || 0) - (r.buy || 0)); 
             }
 
-            // --- GROUPING LOGIC ---
-            const key = r.item + "||" + r.cat + "||" + (r.error || ""); 
+            // --- IMPORTANT: Include customer in the key so different customers show as different rows ---
+            const key = r.item + "||" + r.cat + "||" + (r.error || "") + "||" + (r.customer || ""); 
             
             if (!groupedData[key]) {
                 let initialVal;
                 if (r.cat === 'Pawn') {
-                    initialVal = (r.sell || 0); // Show interest as the value for pawns
+                    initialVal = (r.sell || 0); 
                 } else {
                     initialVal = (r.cat === 'Expense' || r.cat === 'ServiceExpense') ? (r.buy || 0) : (r.sell || 0);
                 }
@@ -975,10 +1003,20 @@
     document.getElementById('report-items-list').innerHTML = Object.values(groupedData).reverse().map(r => {
         const isExp = (r.cat === 'Expense' || r.cat === 'ServiceExpense');
         
-        // --- Generate Error or Pawn Info text ---
+      // --- UPDATED SECTION: ADD CUSTOMER NAME AND MODEL HERE ---
         let secondaryText = '';
-        if (r.cat === 'Repair' && r.error) {
-            secondaryText = `<div style="color: var(--warning); font-size: 12px; margin-top: 2px; font-style: italic;">⚠ Problem: ${r.error}</div>`;
+        if (r.cat === 'Repair') {
+            // This pulls the Customer Name you just added
+            const cust = r.customer ? `<span style="color:var(--primary); font-weight:bold;">[${r.customer}]</span> ` : '';
+            
+            // This pulls the Model (r.item) and the Error (r.error)
+            // We remove "Service: " from the start if it exists to keep it clean
+            const modelClean = r.item.replace("Service: ", "");
+            const prob = r.error ? `<br>⚠ Problem: ${r.error}` : '';
+            
+            secondaryText = `<div style="color: var(--warning); font-size: 12px; margin-top: 2px; font-style: italic;">
+                                ${cust} <b>${modelClean}</b> ${prob}
+                             </div>`;
         } else if (r.cat === 'Pawn') {
             secondaryText = `<div style="color: var(--primary); font-size: 11px; margin-top: 2px;">Status: ${r.status} (Interest Only)</div>`;
         }
@@ -1279,7 +1317,7 @@ async function deleteAndGoBack(id) {
         // SECTION 2: SALES & TRANSACTIONS
         report += `\n\n[ SECTION 2: ALL SALES & TRANSACTION HISTORY ]\n`;
         report += `------------------------------------------------------------\n`;
-        report += `${"DATE".padEnd(12)} | ${"CATEGORY".padEnd(10)} | ${"ITEM & ERROR DETAILS".padEnd(30)} | ${"PROFIT"}\n`;
+        report += `${"DATE".padEnd(12)} | ${"CATEGORY".padEnd(10)} | ${"ITEM & CUSTOMER DETAILS".padEnd(30)} | ${"PROFIT"}\n`;
         report += `------------------------------------------------------------\n`;
 
         allRecs
@@ -1289,17 +1327,38 @@ async function deleteAndGoBack(id) {
             const rDate = (r.date || "N/A").padEnd(12);
             const rCat = (r.cat || "Other").padEnd(10);
             
-            // COMBINE MODEL + ERROR
             let details = r.item || "No Name";
-            if(r.cat === 'Repair' && r.error) {
-                details += ` (${r.error})`; 
+            let rowProfit = 0;
+
+            // --- REPAIR LOGIC: Add Customer + Model + Error ---
+            if(r.cat === 'Repair') {
+                const cust = r.customer ? `${r.customer}: ` : '';
+                const err = r.error ? ` (${r.error})` : '';
+                details = cust + details + err; 
+                rowProfit = (parseFloat(r.sell) || 0) - (parseFloat(r.buy) || 0);
+            } 
+            // --- PAWN LOGIC: Profit is interest ONLY if Collected ---
+            else if(r.cat === 'Pawn') {
+                if(r.status === 'Collected') {
+                    rowProfit = (parseFloat(r.sell) || 0); // Interest only
+                    details = `[COLLECTED] ${details}`;
+                } else {
+                    rowProfit = 0; // Not earned yet
+                    details = `[IN SHOP] ${details}`;
+                }
+            }
+            // --- OTHERS (Sales/Expenses) ---
+            else if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
+                rowProfit = -(parseFloat(r.buy) || 0);
+            }
+            else {
+                rowProfit = (parseFloat(r.sell) || 0) - (parseFloat(r.buy) || 0);
             }
             
+            totalProfit += rowProfit; 
             const rDetails = details.substring(0, 29).padEnd(30);
-            const profit = (parseFloat(r.sell) || 0) - (parseFloat(r.buy) || 0);
-            totalProfit += profit; // Add to running total
             
-            report += `${rDate} | ${rCat} | ${rDetails} | $${profit.toFixed(2)}\n`;
+            report += `${rDate} | ${rCat} | ${rDetails} | $${rowProfit.toFixed(2)}\n`;
         });
 
         // --- 3. SUMMARY SECTION ---
@@ -1318,7 +1377,7 @@ async function deleteAndGoBack(id) {
         txtLink.download = `Full_Shop_Report_${fName}.txt`;
         txtLink.click();
 
-        // JSON Download
+        // JSON Download (System Restore File)
         const backupData = JSON.stringify({ inventory: allInv, records: allRecs, version: "11.0" }, null, 2);
         const jsonBlob = new Blob([backupData], { type: 'application/json' });
         const jsonLink = document.createElement('a');
@@ -1326,7 +1385,7 @@ async function deleteAndGoBack(id) {
         jsonLink.download = `SYSTEM_RESTORE_FILE_${fName}.json`;
         jsonLink.click();
 
-        alert("Done! Report includes Details and Total Profit.");
+        alert("Done! Report includes Customer Names and Corrected Pawn Profit.");
 
     } catch (err) {
         console.error(err);
