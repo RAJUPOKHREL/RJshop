@@ -315,6 +315,8 @@ input, select, textarea {
                 <input type="text" id="rep-desc" placeholder="Device Model & Fault">
 				<label>Error / Problem</label>
     <input type="text" id="rep-error" placeholder="e.g. LCD Replacement / Water Damage">
+	<label>Promo / Add-on Item</label>
+<input list="parts-datalist" id="rep-promo-item" placeholder="Select Item (e.g. Glass)">
 	<label>Part Used (Parts Inventory Only)</label>
     <input list="parts-datalist" id="rep-part-name" placeholder="Search Part (511, Y91...)" onchange="autoFillRepairPart()">
     <datalist id="parts-datalist"></datalist>
@@ -440,7 +442,7 @@ input, select, textarea {
     </section>
 	<section id="detailed-view" class="hidden">
     <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
-        <button onclick="changeGlobalTab('records')" style="background:none; border:1px solid white; color:white; padding:5px 15px; border-radius:10px;">← Back</button>
+        <button onclick="closeDetailsView()" style="background:none; border:1px solid white; color:white; padding:5px 15px; border-radius:10px;">← Back</button>
         <h2 id="detail-title" style="margin:0; font-size:18px;">Item Details</h2>
     </div>
     <div id="detail-list"></div>
@@ -619,22 +621,50 @@ input, select, textarea {
     // --- 2. REPAIRS ---
     } else if(cat === 'Repair') {
         const partName = document.getElementById('rep-part-name').value; 
+        const promoName = document.getElementById('rep-promo-item').value; // Get the Promo/Gift name
         
         data.customer = document.getElementById('rep-customer').value || ""; 
         data.item = "Service: " + (document.getElementById('rep-desc').value || "Unknown Model");
         data.error = document.getElementById('rep-error').value; 
+        
+        // Base Repair Prices
         data.buy = parseFloat(document.getElementById('rep-cost').value) || 0;
         data.sell = parseFloat(document.getElementById('rep-charge').value) || 0;
         data.partName = partName; 
 
-        // AUTOMATIC STOCK CHECK (Replaces the need for 'rep-is-stock' checkbox)
+        // A. MAIN PART STOCK CHECK
         const stockItem = await db.inventory.where('name').equals(partName).first();
         if(partName && stockItem) {
             data.isStockPart = true; 
             await db.inventory.update(stockItem.id, { qty: (stockItem.qty || 1) - 1 });
         } else {
             data.isStockPart = false; 
-        } 
+        }
+
+        // B. PROMO / GIFT LOGIC
+        if(promoName) {
+            const promoItem = await db.inventory.where('name').equals(promoName).first();
+            if(promoItem) {
+                // This popup shows your COST and asks what to charge the customer
+                const promoCharge = parseFloat(prompt(
+                    `PROMO ADDED: ${promoName}\n` +
+                    `Your Buy Price (Cost): $${promoItem.buy}\n` +
+                    `Enter amount to charge customer (0 for free):`, 
+                    promoItem.buy // Default is your cost
+                )) || 0;
+                
+                // Subtract 1 from stock for the gift/promo
+                await db.inventory.update(promoItem.id, { qty: (promoItem.qty || 1) - 1 });
+                
+                // Add the cost of the gift to your expenses
+                data.buy += (promoItem.buy || 0);
+                // Add your custom price to the customer's total bill
+                data.sell += promoCharge;
+                
+                // Update the item name so it shows in reports
+                data.item += " (+ Promo: " + promoName + ")";
+            }
+        }
 
     // --- 3. PAWNS ---
     } else if(cat === 'Pawn') {
@@ -666,7 +696,8 @@ input, select, textarea {
         'sale-item-name', 'sale-price', 'sale-qty', 
         'rep-desc', 'rep-error', 'rep-part-name', 'rep-cost', 'rep-charge', 
         'exp-name', 'exp-amount', 'pawn-info', 'pawn-loan', 'pawn-interest',
-        'rep-customer'
+		'rep-customer', 
+    'rep-promo-item' // Add this so it clears for the next job
     ];
     
     idsToClear.forEach(id => {
@@ -745,7 +776,10 @@ input, select, textarea {
     let html = '';
 
     if(tab === 'acc') {
-        html = items.filter(i => i.type === 'Accessory' && i.name.toLowerCase().includes(search)).map(i => `
+        // Filter, then REVERSE so newest is first
+        html = items.filter(i => i.type === 'Accessory' && i.name.toLowerCase().includes(search))
+                    .reverse() 
+                    .map(i => `
             <div class="card">
                 <b>${i.name}</b> <small>(${i.sub})</small><br>
                 <small>Qty: ${i.qty} | Buy: $${i.buy} | Sell: $${i.sell}</small>
@@ -755,7 +789,9 @@ input, select, textarea {
                 </div>
             </div>`).join('');
     } else if(tab === 'phone') {
-        html = items.filter(i => i.type === 'Phone' && i.name.toLowerCase().includes(search)).map(i => `
+        html = items.filter(i => i.type === 'Phone' && i.name.toLowerCase().includes(search))
+                    .reverse()
+                    .map(i => `
             <div class="card">
                 <b>${i.name}</b> <span class="badge" style="background:#eee">${i.cond}</span><br>
                 <small>${i.specs}</small><br>
@@ -765,8 +801,10 @@ input, select, textarea {
                     <button class="btn-delete" onclick="deleteStock(${i.id})">Delete</button>
                 </div>
             </div>`).join('');
-    } else if(tab === 'Parts') { // --- NEW PARTS LOGIC ---
-        html = items.filter(i => i.type === 'Parts' && i.name.toLowerCase().includes(search)).map(i => `
+    } else if(tab === 'Parts') {
+        html = items.filter(i => i.type === 'Parts' && i.name.toLowerCase().includes(search))
+                    .reverse()
+                    .map(i => `
             <div class="card" style="border-left: 4px solid var(--primary-color);">
                 <b>${i.name}</b> <span class="badge" style="background:var(--accent-color); color:white">Part</span><br>
                 <small>Stock: <b>${i.qty}</b> pieces</small><br>
@@ -778,10 +816,12 @@ input, select, textarea {
             </div>`).join('');
     } else if(tab === 'pawn') {
         const pawns = await db.records.where('cat').equals('Pawn').toArray();
-        html = pawns.map(p => `
+        
+        // REVERSE Pawns so the newest one added is at the top of the list
+        html = pawns.reverse().map(p => `
             <div class="card">
                 <b>${p.item}</b> <span class="badge" style="float:right; background:${p.status === 'In Shop' ? 'var(--warning)' : 'var(--success)'}; color:white">${p.status}</span><br>
-                <small>Loan: $${p.buy} | Int: $${p.sell}</small>
+                <small>Date: ${p.date} | Loan: $${p.buy} | Int: $${p.sell}</small>
                 <div class="control-panel">
                     <button class="btn-edit" onclick="togglePawn(${p.id},'${p.status}')">Toggle Status</button>
                     <button class="btn-delete" onclick="deleteRec(${p.id})">Delete</button>
@@ -791,9 +831,31 @@ input, select, textarea {
     document.getElementById('inv-render-target').innerHTML = html;
 }
     async function togglePawn(id, s) {
-        await db.records.update(id, { status: s === 'In Shop' ? 'Collected' : 'In Shop' });
-        refreshInventoryDisplay('pawn');
+    // 1. Determine the new status
+    const newStatus = (s === 'In Shop' ? 'Collected' : 'In Shop');
+    
+    // 2. Prepare the update data
+    let updateData = { status: newStatus };
+
+    // 3. If we are moving it to 'Collected', also move the date to TODAY
+    if (newStatus === 'Collected') {
+        const today = new Date().toISOString().split('T')[0];
+        updateData.date = today;
     }
+
+    // 4. Update the database
+    await db.records.update(id, updateData);
+
+    // 5. Success message
+    if (newStatus === 'Collected') {
+        alert("Pawn marked as Collected! Profit moved to today's date.");
+    }
+
+    // 6. Refresh the UI
+    refreshInventoryDisplay('pawn');
+    refreshDashboardMetrics(); // Ensure the dashboard profit updates immediately
+    if (typeof syncToCloud === 'function') syncToCloud();
+}
 
     // DASHBOARD & REPORT REFRESH
  async function refreshDashboardMetrics() {
@@ -933,26 +995,36 @@ input, select, textarea {
 
     refreshReportDisplay();
 }
-   async function refreshReportDisplay() {
+  // Add (manualDate = null) here so the function knows what 'manualDate' is
+async function refreshReportDisplay(manualDate = null) {
+    const dateInput = document.getElementById('report-date-input');
+    
+    // 1. Determine which date to use
+    // Use manualDate if we passed one (like from the Back button), 
+    // otherwise use the box value, otherwise today.
+    const targetDate = manualDate || dateInput.value || getFormattedToday();
+    
+    // Update the input box so the calendar shows the date we are actually viewing
+    dateInput.value = targetDate;
+
     let raw = await db.records.toArray();
     
-    // 1. Filter by Date
+    // 2. Filter by Date (Respecting the view mode)
     if(reportViewMode === 'daily') {
-        const d = document.getElementById('report-date-input').value;
-        raw = raw.filter(r => r.date === d);
+        raw = raw.filter(r => r.date === targetDate);
     } else {
         const f = document.getElementById('rep-from').value;
         const t = document.getElementById('rep-to').value;
         if(f && t) raw = raw.filter(r => r.date >= f && r.date <= t);
     }
 
-    // 2. Filter by Category
+    // 3. Filter by Category
     if(currentReportFilter !== 'All') raw = raw.filter(r => r.cat === currentReportFilter);
 
     let rev = 0, prof = 0;
     const groupedData = {};
 
-    // 3. Calculate Totals AND Group Items
+    // 4. Calculate Totals AND Group Items
     raw.forEach(r => {
         const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
         
@@ -967,7 +1039,7 @@ input, select, textarea {
                 prof += ((r.sell || 0) - (r.buy || 0)); 
             }
 
-            // --- IMPORTANT: Include customer in the key so different customers show as different rows ---
+            // Include customer in the key so different customers show as different rows
             const key = r.item + "||" + r.cat + "||" + (r.error || "") + "||" + (r.customer || ""); 
             
             if (!groupedData[key]) {
@@ -999,18 +1071,13 @@ input, select, textarea {
         </div>
     `;
 
-    // 4. Render Grouped Cards
+    // 5. Render Grouped Cards
     document.getElementById('report-items-list').innerHTML = Object.values(groupedData).reverse().map(r => {
         const isExp = (r.cat === 'Expense' || r.cat === 'ServiceExpense');
         
-      // --- UPDATED SECTION: ADD CUSTOMER NAME AND MODEL HERE ---
         let secondaryText = '';
         if (r.cat === 'Repair') {
-            // This pulls the Customer Name you just added
             const cust = r.customer ? `<span style="color:var(--primary); font-weight:bold;">[${r.customer}]</span> ` : '';
-            
-            // This pulls the Model (r.item) and the Error (r.error)
-            // We remove "Service: " from the start if it exists to keep it clean
             const modelClean = r.item.replace("Service: ", "");
             const prob = r.error ? `<br>⚠ Problem: ${r.error}` : '';
             
@@ -1075,6 +1142,19 @@ input, select, textarea {
         refreshDashboardMetrics();
         syncToCloud();
     }
+}
+function closeDetailsView() {
+    // 1. Hide the detailed view
+    document.getElementById('detailed-view').classList.add('hidden');
+    
+    // 2. Show the records (Report) section
+    document.getElementById('records').classList.remove('hidden');
+    
+    // 3. Get the date currently in the report calendar
+    const selectedDate = document.getElementById('report-date-input').value;
+    
+    // 4. Refresh the report for THAT date (not today)
+    refreshReportDisplay(selectedDate);
 }
 async function deleteStock(id) {
     if(confirm("Delete this item from inventory?")) {
