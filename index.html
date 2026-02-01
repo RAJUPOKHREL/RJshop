@@ -291,23 +291,29 @@ input, select, textarea {
                 <option value="Expense">Expense / Bill</option>
             </select>
 
-            <div id="ui-standard">
-                <label>Find Item in Stock</label>
-                <input list="stock-datalist" id="sale-item-name" onchange="handleSaleAutoFill()" placeholder="Search product name...">
-                <datalist id="stock-datalist"></datalist>
-                <div style="display:flex; gap:12px; align-items: flex;">
-                    <div style="flex:1;"><label>Quantity</label><input type="number" id="sale-qty" value="1"></div>
-                    <div style="flex:2;">
-                        <label>Selling Price</label>
-                        <input type="number" id="sale-price">
-                        <div class="check-group">
-                            <input type="checkbox" id="sale-per-unit">
-                            <label for="sale-per-unit">Per Unit (Auto Calc)</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div id="ui-standard">
+    <label>Find Item in Stock</label>
+    <input list="stock-datalist" id="sale-item-name" oninput="handleSaleAutoFill()" placeholder="Search product name...">
+    
+    <label>Add Promo/Gifts (Multi-Select)</label>
+    <input list="stock-datalist" id="sale-promo-search" oninput="addGiftTag(this, 'sale-gift-container')" placeholder="Type to add gifts...">
+    
+    <div id="sale-gift-container" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
 
+    <datalist id="stock-datalist"></datalist>
+
+    <div style="display:flex; gap:12px; align-items: flex; margin-top:10px;">
+        <div style="flex:1;"><label>Quantity</label><input type="number" id="sale-qty" value="1"></div>
+        <div style="flex:2;">
+            <label>Selling Price</label>
+            <input type="number" id="sale-price">
+            <div class="check-group">
+                <input type="checkbox" id="sale-per-unit">
+                <label for="sale-per-unit">Per Unit</label>
+            </div>
+        </div>
+    </div>
+</div>
             <div id="ui-repair" class="hidden">
 			<label>customer name</label>
 				<input type="text" id="rep-customer" placeholder="Customer Name (Optional)" style="margin-top:5px;">
@@ -316,7 +322,7 @@ input, select, textarea {
 				<label>Error / Problem</label>
     <input type="text" id="rep-error" placeholder="e.g. LCD Replacement / Water Damage">
 	<label>Promo / Add-on Item</label>
-<input list="parts-datalist" id="rep-promo-item" placeholder="Select Item (e.g. Glass)">
+<input list="stock-datalist" id="rep-promo-item" placeholder="Select Item (e.g. Glass)">
 	<label>Part Used (Parts Inventory Only)</label>
     <input list="parts-datalist" id="rep-part-name" placeholder="Search Part (511, Y91...)" onchange="autoFillRepairPart()">
     <datalist id="parts-datalist"></datalist>
@@ -460,7 +466,7 @@ input, select, textarea {
     const CLOUD_URL = "https://script.google.com/macros/s/AKfycbx-WiIzIzSlALp5EB3O9RUDHNRTb56J7F-Xa4i-931xT89tZbmT_WzACV2bFH3rxnQz/exec";
     const db = new Dexie("EliteShop_Pro_V11_Final");
     
-    db.version(1).stores({ 
+   db.version(1).stores({ 
         records: '++id, date, cat, item, buy, sell, status, qty',
         inventory: '++id, type, sub, name, buy, sell, qty, specs, cond'
     });
@@ -468,7 +474,53 @@ input, select, textarea {
     let currentReportFilter = 'All';
     let reportViewMode = 'daily';
     const getFormattedToday = () => new Date().toISOString().split('T')[0];
+	
+  let selectedGifts = [];
 
+function addGiftTag(inputEl, containerId) {
+    const val = inputEl.value;
+    if(!val) return;
+
+    // Check if the typed value matches an item in your stock-datalist
+    const options = document.getElementById('stock-datalist').options;
+    let foundInList = false;
+    for (let i = 0; i < options.length; i++) {
+        if (val === options[i].value) {
+            foundInList = true;
+            break;
+        }
+    }
+
+    // ONLY create the bubble if the item is actually selected from the list
+    if (foundInList) {
+        if (selectedGifts.includes(val)) {
+            inputEl.value = ''; // Don't add same gift twice
+            return;
+        }
+
+        selectedGifts.push(val);
+        const container = document.getElementById(containerId);
+        
+        // Create the "Bubble" (Tag)
+        const tag = document.createElement('div');
+        // This style makes it look like a nice button/bubble
+        tag.style = "background:var(--primary); color:white; padding:6px 12px; border-radius:20px; display:flex; align-items:center; gap:8px; font-size:12px; border:1px solid rgba(255,255,255,0.3);";
+        tag.innerHTML = `
+            ${val} 
+            <b onclick="removeGiftTag(this, '${val.replace(/'/g, "\\'")}')" style="cursor:pointer; color:#ff4444; font-size:16px; padding-left:5px;">×</b>
+        `;
+
+        container.appendChild(tag);
+        
+        // CLEAR the input immediately so the list is ready for the next gift
+        inputEl.value = '';
+    }
+}
+
+function removeGiftTag(element, name) {
+    element.parentElement.remove();
+    selectedGifts = selectedGifts.filter(g => g !== name);
+}
     // DASHBOARD RANGE LOGIC
     function toggleDashFilter() {
         document.getElementById('dash-filter-area').classList.toggle('hidden');
@@ -603,7 +655,7 @@ input, select, textarea {
     const date = document.getElementById('sale-date').value || getFormattedToday();
     let data = { date, cat, status: 'Completed', qty: 1 };
 
-    // --- 1. ACCESSORIES & PHONES ---
+  // --- 1. ACCESSORIES & PHONES ---
     if(cat === 'Accessory' || cat === 'Phone') {
         const name = document.getElementById('sale-item-name').value;
         const stock = await db.inventory.where('name').equals(name).first();
@@ -616,7 +668,25 @@ input, select, textarea {
         data.buy = (stock ? stock.buy : 0) * qty;
         data.isStockPart = true; 
 
+        // Subtract the main item from stock
         if(stock) await db.inventory.update(stock.id, { qty: stock.qty - qty });
+
+        // --- NEW: MULTI-GIFT LOGIC (The Bubbles) ---
+        if(selectedGifts && selectedGifts.length > 0) {
+            for (let giftName of selectedGifts) {
+                const promoItem = await db.inventory.where('name').equals(giftName).first();
+                if(promoItem) {
+                    // Subtract 1 from stock for each gift
+                    await db.inventory.update(promoItem.id, { qty: (promoItem.qty || 1) - 1 });
+                    
+                    // Add the cost of the gift to your expenses
+                    data.buy += (promoItem.buy || 0);
+                    
+                    // Add the name to the record so you see it in reports
+                    data.item += " (+ " + giftName + ")";
+                }
+            }
+        }
 
     // --- 2. REPAIRS ---
     } else if(cat === 'Repair') {
@@ -691,23 +761,28 @@ input, select, textarea {
     await db.records.add(data);
     if (typeof syncToCloud === "function") syncToCloud();
 
-    // --- 6. CLEAR ALL INPUTS ---
+   // --- 6. CLEAR ALL INPUTS ---
     const idsToClear = [
-        'sale-item-name', 'sale-price', 'sale-qty', 
+        'sale-item-name', 'sale-price', 'sale-qty', 'sale-promo-search', 
         'rep-desc', 'rep-error', 'rep-part-name', 'rep-cost', 'rep-charge', 
         'exp-name', 'exp-amount', 'pawn-info', 'pawn-loan', 'pawn-interest',
-		'rep-customer', 
-    'rep-promo-item' // Add this so it clears for the next job
+        'rep-customer', 'rep-promo-item' 
     ];
     
+    // First, clear all the standard text boxes
     idsToClear.forEach(id => {
         const el = document.getElementById(id);
         if(el) {
-            // Reset qty to 1 so the next sale doesn't start at 0 or empty
             if(id === 'sale-qty') el.value = '1';
             else el.value = '';
         }
     });
+
+    // Second, clear the special Multi-Gift bubbles and the hidden list
+    const giftContainer = document.getElementById('sale-gift-container');
+    if(giftContainer) giftContainer.innerHTML = ''; 
+    
+    selectedGifts = []; // IMPORTANT: This resets the list for the next customer
 
     // --- 7. REFRESH ---
     changeGlobalTab('dashboard');
