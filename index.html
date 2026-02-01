@@ -385,7 +385,9 @@ input, select, textarea {
                         <option>Charger</option>
                         <option value="CUSTOM">-- WRITE CUSTOM CATEGORY --</option>
                     </select>
-                    <input type="text" id="add-custom-cat-input" class="hidden" placeholder="Enter custom category name...">
+                    <input type="text" id="add-custom-cat-input" list="all-stock-names" class="hidden" placeholder="Type name to search or add new...">
+<datalist id="all-stock-names"></datalist>
+					<datalist id="learned-categories"></datalist>
                 </div>
 
                 <div id="add-form-phone" class="hidden">
@@ -801,22 +803,23 @@ function removeGiftTag(element, name) {
         document.getElementById('add-custom-cat-input').className = (val === 'CUSTOM') ? '' : 'hidden';
     }
 
-    async function saveNewStockItem() {
+   async function saveNewStockItem() {
+    // 1. COLLECT INPUTS FIRST
     const type = document.getElementById('add-main-type').value;
     let sub = "";
     
-    // Logic to handle Sub-Category correctly for all types
     if (type === 'Accessory') {
         sub = document.getElementById('add-sub-select').value;
         if (sub === 'CUSTOM') sub = document.getElementById('add-custom-cat-input').value;
     } else if (type === 'Parts') {
-        sub = 'Parts'; // Ensures the 'sub' field is populated for Parts
+        sub = 'Parts'; 
     } else {
-        sub = 'Smartphone'; // Default sub for Phones
+        sub = 'Smartphone'; 
     }
 
+    // 2. CREATE THE ENTRY OBJECT
     const entry = {
-        type: type, // This will now save as 'Parts' when selected
+        type: type, 
         name: document.getElementById('add-item-name').value,
         buy: parseFloat(document.getElementById('add-buy-price').value) || 0,
         sell: parseFloat(document.getElementById('add-sell-price').value) || 0,
@@ -827,11 +830,30 @@ function removeGiftTag(element, name) {
     };
 
     if (!entry.name) return alert("Please enter a name");
-    
-    await db.inventory.add(entry);
-    syncToCloud();
 
-    // CLEAR ALL INPUTS AFTER SAVING
+    // 3. CHECK IF ITEM EXISTS IN DATABASE
+    const existingItem = await db.inventory.where('name').equals(entry.name).first();
+
+    if (existingItem) {
+        // UPDATE: Add new quantity to old quantity
+        const newQty = existingItem.qty + entry.qty;
+        await db.inventory.update(existingItem.id, { 
+            qty: newQty, 
+            buy: entry.buy, 
+            sell: entry.sell 
+        });
+        alert("Updated quantity for: " + entry.name);
+    } else {
+        // ADD: Truly new item
+        await db.inventory.add(entry);
+        alert("Added new item: " + entry.name);
+    }
+
+    // 4. TRIGGER LEARNING & SYNC
+    await updateLearnedCategories();
+    if (typeof syncToCloud === "function") syncToCloud();
+
+    // 5. CLEAR ALL INPUTS
     document.getElementById('add-item-name').value = '';
     document.getElementById('add-buy-price').value = '';
     document.getElementById('add-sell-price').value = '';
@@ -839,10 +861,37 @@ function removeGiftTag(element, name) {
     document.getElementById('add-phone-specs').value = '';
     document.getElementById('add-custom-cat-input').value = '';
 
-    alert("Added to " + type + " successfully!");
-    
-    // Automatically switch to the correct tab to show the new item
+    // 6. REFRESH VIEW
     switchInventorySubTab(type === 'Accessory' ? 'acc' : (type === 'Phone' ? 'phone' : 'Parts'));
+}
+async function updateLearnedCategories() {
+    const invItems = await db.inventory.toArray();
+    const counts = {};
+    
+    // 1. Count how many times each sub-category is used
+    invItems.forEach(item => {
+        if (item.sub && item.type === 'Accessory') {
+            counts[item.sub] = (counts[item.sub] || 0) + 1;
+        }
+    });
+
+    // 2. Your Standard list
+    const defaults = ['V8 Cable', 'Type-C Cable', 'Earphone', 'Airpods', 'Charger'];
+    const selectBox = document.getElementById('add-sub-select');
+    
+    // 3. Build the new list for the dropdown
+    let optionsHtml = defaults.map(o => `<option value="${o}">${o}</option>`).join('');
+
+    // 4. If a custom name is used 3+ times, add it to the main list
+    for (let cat in counts) {
+        if (counts[cat] >= 3 && !defaults.includes(cat)) {
+            optionsHtml += `<option value="${cat}">${cat}</option>`;
+        }
+    }
+
+    // 5. Always keep the CUSTOM option at the bottom
+    optionsHtml += `<option value="CUSTOM">-- WRITE CUSTOM CATEGORY --</option>`;
+    selectBox.innerHTML = optionsHtml;
 }
 
     async function refreshInventoryDisplay(tab = 'acc') {
@@ -1298,23 +1347,40 @@ async function modifyStock(id) {
         switchInventorySubTab('acc');
     }
 }
-
-async function switchInventorySubTab(tab) {
+async function refreshStockNameSuggestions() {
+    try {
+        const items = await db.inventory.toArray();
+        const dataList = document.getElementById('all-stock-names');
+        if (dataList) {
+            // This fills the list with all your current product names
+            dataList.innerHTML = items.map(i => `<option value="${i.name}">`).join('');
+        }
+    } catch (err) {
+        console.error("Error loading suggestions:", err);
+    }
+}
+ async function switchInventorySubTab(tab) {
     // 1. Handle Button Active States
     document.querySelectorAll('#inventory .sub-nav button').forEach(b => b.classList.remove('active'));
     const btn = document.getElementById('inv-tab-' + tab);
     if(btn) btn.classList.add('active');
 
     // 2. Toggle between the List view and the Add Item form
-    // If tab is 'add', show form. If anything else (acc, phone, Parts), show list.
-    document.getElementById('inv-list-container').className = (tab === 'add') ? 'hidden' : '';
-    document.getElementById('inv-add-container').className = (tab === 'add') ? '' : 'hidden';
-
-    // 3. Refresh the display for the selected category
-    if(tab !== 'add') {
+    if(tab === 'add') {
+        document.getElementById('inv-list-container').classList.add('hidden');
+        document.getElementById('inv-add-container').classList.remove('hidden');
+        
+        // --- THIS UPDATES THE SEARCH LIST FOR THE CUSTOM BOX ---
+        refreshStockNameSuggestions(); 
+    } else {
+        document.getElementById('inv-list-container').classList.remove('hidden');
+        document.getElementById('inv-add-container').classList.add('hidden');
+        
+        // Refresh the display for the selected category (acc, phone, Parts)
         refreshInventoryDisplay(tab); 
     }
 }
+
 async function showDetails(itemName, category) {
     document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
     document.getElementById('detailed-view').classList.remove('hidden');
@@ -1553,12 +1619,13 @@ async function deleteAndGoBack(id) {
 document.getElementById('report-date-input').setAttribute('max', new Date().toISOString().split('T')[0]);
 // Automatically pull data from Google Sheets whenever the app starts
 window.addEventListener('load', () => {
+// Run this so your dropdown updates when the app starts
+updateLearnedCategories();
     // Small delay to ensure Dexie DB is ready
     setTimeout(() => {
         syncFromCloud();
     }, 1000);
 });
-
 </script>
 </body>
 </html>
