@@ -17,6 +17,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style> 
+		/* This tells Windows/Chrome to render the internal dropdown list in dark mode */
+select {
+    color-scheme: dark !important;
+    background-color: #1a1a1a !important; /* Dark background for the box */
+    color: white !important; /* White text */
+}
+/* This specifically targets the 'Options' list that pops out on Windows */
+select option {
+    background-color: #1a1a1a !important;
+    color: white !important;
+}
 	.header {
     /* Respects the notch area */
     padding: calc(10px + env(safe-area-inset-top)) 20px 10px 20px !important;
@@ -1743,3 +1754,4 @@ updateLearnedCategories();
 </script>
 </body>
 </html>
+
