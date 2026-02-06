@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover ,minimal-ui">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RJ Shop">
 
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<link rel="manifest" href='data:application/json,{"name":"RJ Shop","short_name":"Shop","display":"standalone","start_url":"index.html".","background_color":"#000000","theme_color":"#000000"}'>
+<link rel="manifest" href='data:application/json,{"name":"RJ Shop","short_name":"Shop","display":"standalone","start_url":"index.html","background_color":"#000000","theme_color":"#000000"}'>
 <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/RAJUPOKHREL/RJshop/refs/heads/main/5153888%20(1).jpg">
     <title>Elite Shop Manager Pro - Version 11.0</title>
     
@@ -17,11 +17,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style> 
-	/* ADD THIS PART BACK IN */
-.header {
-    padding: calc(15px + env(safe-area-inset-top)) 20px 15px 20px !important;
-    background: transparent !important; 
-    backdrop-filter: blur(10px); 
+	.header {
+    /* Respects the notch area */
+    padding: calc(10px + env(safe-area-inset-top)) 20px 10px 20px !important;
+    background: rgba(0,0,0,0.2) !important; 
+    backdrop-filter: blur(15px); 
     border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
     display: flex; 
     justify-content: space-between; 
@@ -33,21 +33,22 @@
 
 .bottom-nav {
     position: fixed; 
-    bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+    /* Lifts the menu above the iPhone home bar */
+    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
     left: 50%; 
     transform: translateX(-50%); 
-    width: 90%; 
+    width: 92%; 
     max-width: 400px; 
-    height: 70px;
+    height: 65px;
     border-radius: 40px;
     z-index: 1000;
     display: flex; 
     justify-content: space-around; 
     align-items: center;
-    background: rgba(255, 255, 255, 0.07) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
     backdrop-filter: blur(20px) saturate(160%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
 }
 
@@ -1742,4 +1743,3 @@ updateLearnedCategories();
 </script>
 </body>
 </html>
-
