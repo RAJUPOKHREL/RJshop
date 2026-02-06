@@ -3,12 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RJ Shop">
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href='data:application/json,{"name":"RJ Shop","short_name":"Shop","display":"standalone","start_url":".","background_color":"#000000","theme_color":"#000000"}'>
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/RAJUPOKHREL/RJshop/refs/heads/main/5153888%20(1).jpg">
     <title>Elite Shop Manager Pro - Version 11.0</title>
     
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style> 
+	.header {
+    padding-top: env(safe-area-inset-top);
+}
     /* 1. TARGETING THE OPTIONS DROPDOWN & SELECT BOXES */
     select, 
     option, 
@@ -192,6 +203,68 @@ input, select, textarea {
     filter: blur(5px);
     pointer-events: none;
     user-select: none;
+}
+/* 1. GLASS OVERHAUL: More depth and "frosted" feel */
+ .bottom-nav {
+    background: rgba(255, 255, 255, 0.07) !important;
+    backdrop-filter: blur(5px) saturate(100%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 2. GRADIENT TEXT: Makes your totals look like "Money" */
+#fin-net, #fin-cash, .mini-stat strong {
+    background: linear-gradient(to right, #10b981, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 28px !important;
+    letter-spacing: -1px;
+}
+
+/* 3. NEON SYNC DOT: Makes it look "Live" */
+#sync-dot {
+    width: 12px;
+    height: 12px;
+    background-color: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 15px var(--success);
+    animation: neon-pulse 2s infinite;
+}
+
+@keyframes neon-pulse {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 25px var(--success); }
+    100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+/* 4. SMOOTH PAGE ENTRANCE: Content "slides up" into view */
+@keyframes eliteSlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+section:not(.hidden) {
+    animation: eliteSlideUp 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 5. BUTTON GLOW: Interaction feel */
+.action-btn:active {
+    transform: scale(0.96) translateY(2px);
+    filter: brightness(1.2);
+}
+
+.action-btn {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 12px !important;
+    transition: all 0.3s ease !important;
+}
+body {
+    /* Safe Area Inset handles the "Notch" on newer iPhones */
+    padding-top: env(safe-area-inset-top);
 }
 </style>
 </head>
