@@ -17,12 +17,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style> 
-		/* This tells Windows/Chrome to render the internal dropdown list in dark mode */
+	/* This tells Windows/Chrome to render the internal dropdown list in dark mode */
 select {
     color-scheme: dark !important;
     background-color: #1a1a1a !important; /* Dark background for the box */
     color: white !important; /* White text */
 }
+
 /* This specifically targets the 'Options' list that pops out on Windows */
 select option {
     background-color: #1a1a1a !important;
@@ -161,18 +162,23 @@ select, option, .options-btn, .options-menu, [class*="options"] {
         text-transform: uppercase;
     }
 
-    /* 7. GRID & INPUTS */
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
-    .mini-stat { 
-        padding: 20px; border-radius: 22px; display: flex; flex-direction: column;
-        background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-    .mini-stat strong { font-size: 24px; font-weight: 900; }
-    
-    input, select, textarea { 
-        width: 100% !important; box-sizing: border-box !important; padding: 16px; margin-bottom: 12px; border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important; background: transparent !important; color: white !important;
-    }
+    /* 7. GRID & INPUTS - Optimized for iPhone X */
+.stat-grid { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 8px; /* Slightly smaller gap to give numbers more room */
+    margin-bottom: 15px; 
+}
+
+.mini-stat { 
+    padding: 15px 10px; /* Reduced side padding so text doesn't hit the edges */
+    border-radius: 20px; 
+    display: flex; 
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.05) !important; 
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    min-width: 0; /* Allows the card to handle shrinking content */
+}
 
     /* 8. TAB LOGIC & UTILS */
     .hidden { display: none !important; }
@@ -225,13 +231,32 @@ input, select, textarea {
     pointer-events: none;
     user-select: none;
 }
-/* 2. GRADIENT TEXT: Makes your totals look like "Money" */
+/* GRADIENT TEXT & AUTO-SIZE: Fixes the 6-7 digit cutoff */
 #fin-net, #fin-cash, .mini-stat strong {
     background: linear-gradient(to right, #10b981, #34d399);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    font-size: 28px !important;
+    
+    /* THE FIX: clamp lets it be 28px normally, but it will shrink down to 18px on small screens */
+    font-size: clamp(16px, 5.5vw, 28px) !important;
+    
+    font-weight: 900;
     letter-spacing: -1px;
+    white-space: nowrap; /* Forces number to stay on one line */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Adds ... only if it absolutely won't fit at 16px */
+}
+
+input, select, textarea { 
+    width: 100% !important; 
+    box-sizing: border-box !important; 
+    padding: 16px; 
+    margin-bottom: 12px; 
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important; 
+    background: transparent !important; 
+    color: white !important;
+    font-size: 16px !important; /* Prevents iOS Safari from zooming in on focus */
 }
 
 /* 3. NEON SYNC DOT: Makes it look "Live" */
@@ -1754,4 +1779,3 @@ updateLearnedCategories();
 </script>
 </body>
 </html>
-
