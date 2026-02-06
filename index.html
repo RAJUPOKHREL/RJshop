@@ -17,28 +17,46 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style> 
-	.header {
-    padding-top: env(safe-area-inset-top);
+	/* ADD THIS PART BACK IN */
+.header {
+    padding: calc(15px + env(safe-area-inset-top)) 20px 15px 20px !important;
+    background: transparent !important; 
+    backdrop-filter: blur(10px); 
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    position: sticky; 
+    top: 0; 
+    z-index: 1000;
 }
-    /* 1. TARGETING THE OPTIONS DROPDOWN & SELECT BOXES */
-    select, 
-    option, 
-    .options-btn, 
-    .options-menu,
-    [class*="options"] { 
-        background: transparent !important; 
-        background-color: transparent !important;
-        color: white !important; 
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        backdrop-filter: none !important;
-        -webkit-appearance: none; 
-    }
 
-    select option { 
-        background: rgba(0, 0, 0, 0.8) !important; 
-        color: white !important; 
-    }
+.bottom-nav {
+    position: fixed; 
+    bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+    left: 50%; 
+    transform: translateX(-50%); 
+    width: 90%; 
+    max-width: 400px; 
+    height: 70px;
+    border-radius: 40px;
+    z-index: 1000;
+    display: flex; 
+    justify-content: space-around; 
+    align-items: center;
+    background: rgba(255, 255, 255, 0.07) !important;
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
+}
 
+select, option, .options-btn, .options-menu, [class*="options"] { 
+    background: transparent !important; 
+    color: white !important; 
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    -webkit-appearance: none; 
+}
     :root { 
         --primary: #77777777; 
         --success: #10b981; 
@@ -55,15 +73,6 @@
         background-size: cover !important;
         font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
         padding-bottom: 120px; color: white; -webkit-tap-highlight-color: transparent;
-    }
-
-    /* 3. HEADER & FLOATING PILL NAV */
-    .header { padding: 15px 20px; background: transparent !important; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
-
-    .bottom-nav { 
-        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; height: 70px; 
-        background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(25px); display: flex; justify-content: space-around; 
-        align-items: center; border: 1px solid rgba(255, 255, 255, 0.1) !important; z-index: 1000; border-radius: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
     .nav-item { background: transparent !important; border: none !important; color: rgba(255, 255, 255, 0.6) !important; padding: 10px 15px; display: flex; flex-direction: column; align-items: center; transition: 0.3s; font-size: 12px; }
@@ -204,15 +213,6 @@ input, select, textarea {
     pointer-events: none;
     user-select: none;
 }
-/* 1. GLASS OVERHAUL: More depth and "frosted" feel */
- .bottom-nav {
-    background: rgba(255, 255, 255, 0.07) !important;
-    backdrop-filter: blur(5px) saturate(100%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
-}
-
 /* 2. GRADIENT TEXT: Makes your totals look like "Money" */
 #fin-net, #fin-cash, .mini-stat strong {
     background: linear-gradient(to right, #10b981, #34d399);
@@ -261,10 +261,6 @@ section:not(.hidden) {
     letter-spacing: 2px;
     font-size: 12px !important;
     transition: all 0.3s ease !important;
-}
-body {
-    /* Safe Area Inset handles the "Notch" on newer iPhones */
-    padding-top: env(safe-area-inset-top);
 }
 </style>
 </head>
