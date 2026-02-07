@@ -370,15 +370,19 @@ section:not(.hidden) {
         <span style="opacity:0.8">General Expense:</span> 
         <span id="fin-gen-exp" style="color:#ff6b6b; font-weight:700">$0.00</span>
     </div>
+	<div style="display:flex; justify-content:space-between;">
+    <span style="opacity:0.8">Service Revenue:</span> 
+    <span id="fin-serv-earn" class="privacy-target" style="color:var(--success); font-weight:700">$0.00</span>
+</div>
+<div style="display:flex; justify-content:space-between;">
+    <span style="opacity:0.8">Service/Repair Profit:</span> 
+    <span id="fin-service-profit" class="privacy-target" style="color:var(--success); font-weight:700">$0.00</span>
+</div>
 
     <div style="display:flex; justify-content:space-between;">
         <span style="opacity:0.8">Total Revenue:</span> 
         <span id="fin-earn" class="privacy-target" style="color:var(--success); font-weight:700">$0.00</span>
     </div>
-	<div style="display:flex; justify-content:space-between;">
-    <span style="opacity:0.8">Service/Repair Profit:</span> 
-    <span id="fin-service-profit" class="privacy-target" style="color:var(--success); font-weight:700">$0.00</span>
-</div>
 
     <div style="display:flex; justify-content:space-between; background: rgba(33, 150, 243, 0.1); padding: 10px; border-radius: 8px; margin-top: 5px;">
         <span style="opacity:0.8; font-weight:bold;">Cash in Hand:</span> 
@@ -1103,7 +1107,7 @@ async function updateLearnedCategories() {
 }
 
     // DASHBOARD & REPORT REFRESH
- async function refreshDashboardMetrics() {
+async function refreshDashboardMetrics() {
     let from = document.getElementById('dash-from').value;
     let to = document.getElementById('dash-to').value;
     const todayStr = new Date().toISOString().split('T')[0];
@@ -1140,19 +1144,23 @@ async function updateLearnedCategories() {
     let generalExpense = 0;
     let costOfGoodsSold_Filtered = 0;
     let oldStockValueUsed = 0;
-
-    // --- ADD THIS VARIABLE HERE ---
     let totalServiceRepairProfit = 0; 
+    
+    // --- 1. NEW VARIABLE FOR SERVICE REVENUE ---
+    let serviceRevenueOnly = 0; 
 
     filteredRecs.forEach(r => {
         if(r.cat === 'Expense') {
             generalExpense += (r.buy || 0); 
         } else if (r.cat === 'ServiceExpense') {
             serviceExpense += (r.buy || 0);
+            // Optional: If you consider ServiceExpense as part of Service Revenue, add it here.
+            // But usually, only 'Repair' is revenue.
         } else if (r.cat === 'Repair') {
-            // --- ADD THIS LINE: Calculate profit for each repair ---
-            totalServiceRepairProfit += ((r.sell || 0) - (r.buy || 0));
+            // --- 2. CALCULATE SERVICE REVENUE (Income Only) ---
+            serviceRevenueOnly += (r.sell || 0);
 
+            totalServiceRepairProfit += ((r.sell || 0) - (r.buy || 0));
             serviceExpense += (r.buy || 0); 
             totalRevenue += (r.sell || 0);
             if(r.isStockPart === true) {
@@ -1182,7 +1190,6 @@ async function updateLearnedCategories() {
     });
 
     let totalStockInvested = currentInventoryValue + totalCostOfAllSoldItems;
-
     let netProfit = totalRevenue - costOfGoodsSold_Filtered - serviceExpense;
     let cashInHand = netProfit - generalExpense + oldStockValueUsed; 
 
@@ -1197,7 +1204,10 @@ async function updateLearnedCategories() {
     document.getElementById('fin-earn').innerText = `$${totalRevenue.toFixed(2)}`;
     document.getElementById('fin-net').innerText = `$${netProfit.toFixed(2)}`;
 
-    // --- ADD THIS LINE: Display the result ---
+    // --- 3. UPDATE THE NEW UI ELEMENTS ---
+    const servEarnEl = document.getElementById('fin-serv-earn');
+    if(servEarnEl) servEarnEl.innerText = `$${serviceRevenueOnly.toFixed(2)}`;
+
     const servProfEl = document.getElementById('fin-service-profit');
     if(servProfEl) servProfEl.innerText = `$${totalServiceRepairProfit.toFixed(2)}`;
 }
@@ -1632,20 +1642,18 @@ async function deleteAndGoBack(id) {
 }
   async function generatePDF() {
     try {
-        // 1. Grab every single piece of data
+        // 1. Grab data
         const allRecs = await db.records.toArray();
         const allInv = await db.inventory.toArray();
         const timestamp = new Date().toLocaleString();
-
-        let totalProfit = 0; // Variable to track total earnings
+        let totalProfit = 0; 
 
         // --- 2. CREATE THE HUMAN READABLE REPORT (TXT) ---
         let report = `==========================================\n`;
-        report += `   ELITE SHOP MANAGER - FULL DATABASE    \n`;
-        report += `   Generated: ${timestamp}               \n`;
+        report += `    ELITE SHOP MANAGER - FULL DATABASE    \n`;
+        report += `    Generated: ${timestamp}               \n`;
         report += `==========================================\n\n`;
 
-        // SECTION 1: STOCK / INVENTORY
         report += `[ SECTION 1: CURRENT STOCK ON SHELVES ]\n`;
         report += `------------------------------------------------------------\n`;
         report += `${"ITEM NAME".padEnd(25)} | ${"QTY".padEnd(5)} | ${"BUY".padEnd(8)} | ${"SELL"}\n`;
@@ -1659,7 +1667,6 @@ async function deleteAndGoBack(id) {
             report += `${name.padEnd(25)} | ${qty.padEnd(5)} | $${buy.padEnd(7)} | $${sell}\n`;
         });
 
-        // SECTION 2: SALES & TRANSACTIONS
         report += `\n\n[ SECTION 2: ALL SALES & TRANSACTION HISTORY ]\n`;
         report += `------------------------------------------------------------\n`;
         report += `${"DATE".padEnd(12)} | ${"CATEGORY".padEnd(10)} | ${"ITEM & CUSTOMER DETAILS".padEnd(30)} | ${"PROFIT"}\n`;
@@ -1671,28 +1678,24 @@ async function deleteAndGoBack(id) {
         .forEach(r => {
             const rDate = (r.date || "N/A").padEnd(12);
             const rCat = (r.cat || "Other").padEnd(10);
-            
             let details = r.item || "No Name";
             let rowProfit = 0;
 
-            // --- REPAIR LOGIC: Add Customer + Model + Error ---
             if(r.cat === 'Repair') {
                 const cust = r.customer ? `${r.customer}: ` : '';
                 const err = r.error ? ` (${r.error})` : '';
                 details = cust + details + err; 
                 rowProfit = (parseFloat(r.sell) || 0) - (parseFloat(r.buy) || 0);
             } 
-            // --- PAWN LOGIC: Profit is interest ONLY if Collected ---
             else if(r.cat === 'Pawn') {
                 if(r.status === 'Collected') {
-                    rowProfit = (parseFloat(r.sell) || 0); // Interest only
+                    rowProfit = (parseFloat(r.sell) || 0);
                     details = `[COLLECTED] ${details}`;
                 } else {
-                    rowProfit = 0; // Not earned yet
+                    rowProfit = 0;
                     details = `[IN SHOP] ${details}`;
                 }
             }
-            // --- OTHERS (Sales/Expenses) ---
             else if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
                 rowProfit = -(parseFloat(r.buy) || 0);
             }
@@ -1702,35 +1705,45 @@ async function deleteAndGoBack(id) {
             
             totalProfit += rowProfit; 
             const rDetails = details.substring(0, 29).padEnd(30);
-            
             report += `${rDate} | ${rCat} | ${rDetails} | $${rowProfit.toFixed(2)}\n`;
         });
 
-        // --- 3. SUMMARY SECTION ---
         report += `\n------------------------------------------------------------\n`;
         report += `TOTAL NET PROFIT: $${totalProfit.toFixed(2)}\n`;
         report += `------------------------------------------------------------\n`;
         report += `\n=== END OF REPORT ===`;
 
-        // --- 4. DOWNLOADS ---
+        // --- 4. THE FIX: DELAYED DOWNLOADS FOR IPHONE ---
         const fName = typeof getFormattedToday === 'function' ? getFormattedToday() : new Date().toISOString().split('T')[0];
         
-        // TXT Download
-        const txtBlob = new Blob([report], { type: 'text/plain' });
-        const txtLink = document.createElement('a');
-        txtLink.href = URL.createObjectURL(txtBlob);
-        txtLink.download = `Full_Shop_Report_${fName}.txt`;
-        txtLink.click();
-
-        // JSON Download (System Restore File)
+        // A. Start JSON Download immediately
         const backupData = JSON.stringify({ inventory: allInv, records: allRecs, version: "11.0" }, null, 2);
         const jsonBlob = new Blob([backupData], { type: 'application/json' });
         const jsonLink = document.createElement('a');
-        jsonLink.href = URL.createObjectURL(jsonBlob);
+        const jsonUrl = URL.createObjectURL(jsonBlob);
+        jsonLink.href = jsonUrl;
         jsonLink.download = `SYSTEM_RESTORE_FILE_${fName}.json`;
+        document.body.appendChild(jsonLink);
         jsonLink.click();
+        document.body.removeChild(jsonLink);
 
-        alert("Done! Report includes Customer Names and Corrected Pawn Profit.");
+        // B. Wait 1.5 seconds, then start TXT Download
+        setTimeout(() => {
+            const txtBlob = new Blob([report], { type: 'text/plain' });
+            const txtLink = document.createElement('a');
+            const txtUrl = URL.createObjectURL(txtBlob);
+            txtLink.href = txtUrl;
+            txtLink.download = `Full_Shop_Report_${fName}.txt`;
+            document.body.appendChild(txtLink);
+            txtLink.click();
+            document.body.removeChild(txtLink);
+            
+            // Cleanup memory
+            URL.revokeObjectURL(jsonUrl);
+            URL.revokeObjectURL(txtUrl);
+            
+            alert("Backup Complete! Both JSON and TXT files have been sent to your downloads.");
+        }, 1500); 
 
     } catch (err) {
         console.error(err);
