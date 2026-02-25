@@ -559,6 +559,11 @@ section:not(.hidden) {
                 <input type="date" id="rep-from" onchange="refreshReportDisplay()">
                 <input type="date" id="rep-to" onchange="refreshReportDisplay()">
             </div>
+			<div style="padding: 0 15px 10px 15px;">
+        <input type="text" id="report-search" placeholder="🔍 Search items, customers, or models..." 
+               onkeyup="refreshReportDisplay()" 
+               style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; background: #fff; color: #333; font-size: 14px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+    </div>
 			
         </div>
 
@@ -782,21 +787,56 @@ function removeGiftTag(element, name) {
     const date = document.getElementById('sale-date').value || getFormattedToday();
     let data = { date, cat, status: 'Completed', qty: 1 };
 
-  // --- 1. ACCESSORIES & PHONES ---
+  // --- 1. ACCESSORIES & PHONES (FIFO COSTING ENABLED) ---
     if(cat === 'Accessory' || cat === 'Phone') {
         const name = document.getElementById('sale-item-name').value;
         const stock = await db.inventory.where('name').equals(name).first();
-        const qty = parseInt(document.getElementById('sale-qty').value) || 1;
+        const qtyToSell = parseInt(document.getElementById('sale-qty').value) || 1;
         const price = parseFloat(document.getElementById('sale-price').value) || 0;
         
-        data.qty = qty;
+        data.qty = qtyToSell;
         data.item = name;
-        data.sell = document.getElementById('sale-per-unit').checked ? (price * qty) : price;
-        data.buy = (stock ? stock.buy : 0) * qty;
+        data.sell = document.getElementById('sale-per-unit').checked ? (price * qtyToSell) : price;
         data.isStockPart = true; 
 
-        // Subtract the main item from stock
-        if(stock) await db.inventory.update(stock.id, { qty: stock.qty - qty });
+        // --- NEW FIFO CALCULATION ---
+        let totalCostOfThisSale = 0;
+
+        if (stock && stock.batches && stock.batches.length > 0) {
+            let remaining = qtyToSell;
+            let updatedBatches = [...stock.batches];
+
+            for (let i = 0; i < updatedBatches.length; i++) {
+                if (remaining <= 0) break;
+                
+                let batch = updatedBatches[i];
+                if (batch.qty > 0) {
+                    let take = Math.min(batch.qty, remaining);
+                    totalCostOfThisSale += (take * (parseFloat(batch.buy) || 0));
+                    batch.qty -= take;
+                    remaining -= take;
+                }
+            }
+            
+            // If the user tries to sell more than what's in batches, 
+            // use the last known buy price for the extra items
+            if (remaining > 0) {
+                totalCostOfThisSale += (remaining * (stock.buy || 0));
+            }
+
+            data.buy = totalCostOfThisSale;
+
+            // Update the inventory: Decrease total qty AND update the batches
+            await db.inventory.update(stock.id, { 
+                qty: (stock.qty || 0) - qtyToSell, 
+                batches: updatedBatches 
+            });
+
+        } else {
+            // FALLBACK: If no batches exist yet (Old items in your system)
+            data.buy = (stock ? (parseFloat(stock.buy) || 0) : 0) * qtyToSell;
+            if(stock) await db.inventory.update(stock.id, { qty: (stock.qty || 0) - qtyToSell });
+        }
 
         // --- NEW: MULTI-GIFT LOGIC (The Bubbles) ---
         if(selectedGifts && selectedGifts.length > 0) {
@@ -929,22 +969,12 @@ function removeGiftTag(element, name) {
     }
 
    async function saveNewStockItem() {
-    // 1. COLLECT INPUTS FIRST
     const type = document.getElementById('add-main-type').value;
-    let sub = "";
-    
-    if (type === 'Accessory') {
-        sub = document.getElementById('add-sub-select').value;
-        if (sub === 'CUSTOM') sub = document.getElementById('add-custom-cat-input').value;
-    } else if (type === 'Parts') {
-        sub = 'Parts'; 
-    } else {
-        sub = 'Smartphone'; 
-    }
+    let sub = (type === 'Accessory') ? document.getElementById('add-sub-select').value : type;
+    if (sub === 'CUSTOM') sub = document.getElementById('add-custom-cat-input').value;
 
-    // 2. CREATE THE ENTRY OBJECT
     const entry = {
-        type: type, 
+        type: type,
         name: document.getElementById('add-item-name').value,
         buy: parseFloat(document.getElementById('add-buy-price').value) || 0,
         sell: parseFloat(document.getElementById('add-sell-price').value) || 0,
@@ -956,28 +986,40 @@ function removeGiftTag(element, name) {
 
     if (!entry.name) return alert("Please enter a name");
 
-    // 3. CHECK IF ITEM EXISTS IN DATABASE
     const existingItem = await db.inventory.where('name').equals(entry.name).first();
 
     if (existingItem) {
-        // UPDATE: Add new quantity to old quantity
-        const newQty = existingItem.qty + entry.qty;
+        // --- CORRECT BATCH LOGIC ---
+        let batches = existingItem.batches || [];
+        
+        // Wrap old stock into a batch if it doesn't have one yet
+        if (batches.length === 0 && existingItem.qty > 0) {
+            batches.push({ qty: existingItem.qty, buy: existingItem.buy });
+        }
+        
+        // Add the new stock as a new layer
+        batches.push({ qty: entry.qty, buy: entry.buy });
+
         await db.inventory.update(existingItem.id, { 
-            qty: newQty, 
-            buy: entry.buy, 
-            sell: entry.sell 
+            qty: existingItem.qty + entry.qty, 
+            buy: entry.buy, // Newest price for UI display
+            sell: entry.sell,
+            batches: batches // SAVE the layered batches here
         });
-        alert("Updated quantity for: " + entry.name);
+        alert("Refilled: " + entry.name);
     } else {
-        // ADD: Truly new item
+        // Brand new item: Start with the first batch
+        entry.batches = [{ qty: entry.qty, buy: entry.buy }];
         await db.inventory.add(entry);
         alert("Added new item: " + entry.name);
     }
 
-    // 4. TRIGGER LEARNING & SYNC
     await updateLearnedCategories();
     if (typeof syncToCloud === "function") syncToCloud();
-
+    // 4. TRIGGER LEARNING & SYNC
+    await updateLearnedCategories();
+	
+    if (typeof syncToCloud === "function") syncToCloud();
     // 5. CLEAR ALL INPUTS
     document.getElementById('add-item-name').value = '';
     document.getElementById('add-buy-price').value = '';
@@ -1256,18 +1298,15 @@ async function refreshDashboardMetrics() {
   // Add (manualDate = null) here so the function knows what 'manualDate' is
 async function refreshReportDisplay(manualDate = null) {
     const dateInput = document.getElementById('report-date-input');
+    const searchInput = document.getElementById('report-search'); 
+    const searchQuery = searchInput ? searchInput.value.toLowerCase() : "";
     
-    // 1. Determine which date to use
-    // Use manualDate if we passed one (like from the Back button), 
-    // otherwise use the box value, otherwise today.
     const targetDate = manualDate || dateInput.value || getFormattedToday();
-    
-    // Update the input box so the calendar shows the date we are actually viewing
     dateInput.value = targetDate;
 
     let raw = await db.records.toArray();
     
-    // 2. Filter by Date (Respecting the view mode)
+    // 1. Filter by Date/Range
     if(reportViewMode === 'daily') {
         raw = raw.filter(r => r.date === targetDate);
     } else {
@@ -1276,16 +1315,13 @@ async function refreshReportDisplay(manualDate = null) {
         if(f && t) raw = raw.filter(r => r.date >= f && r.date <= t);
     }
 
-    // 3. Filter by Category
+    // 2. Filter by Category
     if(currentReportFilter !== 'All') raw = raw.filter(r => r.cat === currentReportFilter);
 
+    // --- CALCULATE TOTALS FIRST (Using the full list before search) ---
     let rev = 0, prof = 0;
-    const groupedData = {};
-
-    // 4. Calculate Totals AND Group Items
     raw.forEach(r => {
         const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
-        
         if(isValid) { 
             if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
                 prof -= (r.buy || 0); 
@@ -1296,10 +1332,43 @@ async function refreshReportDisplay(manualDate = null) {
                 rev += (r.sell || 0); 
                 prof += ((r.sell || 0) - (r.buy || 0)); 
             }
+        }
+    });
 
-            // Include customer in the key so different customers show as different rows
+    // Update the UI with the FULL totals
+    document.getElementById('report-financial-summary').innerHTML = `
+        <div style="display:flex; justify-content:space-between; font-size:16px; padding:10px;">
+            <span>Revenue: $${rev.toFixed(2)}</span>
+            <span>Profit: <b style="color:var(--success)">$${prof.toFixed(2)}</b></span>
+        </div>
+    `;
+
+   // --- NOW FILTER THE LIST FOR SEARCH ---
+    let listData; 
+
+    if (searchQuery) {
+        // 1. If searching, use the FULL database (raw contains all items before date filtering)
+        // Note: Make sure 'raw' is defined as await db.records.toArray() BEFORE the date filters are applied
+        const allRecords = await db.records.toArray(); 
+        listData = allRecords.filter(r => {
+            const itemName = (r.item || "").toLowerCase();
+            const customer = (r.customer || "").toLowerCase();
+            const error = (r.error || "").toLowerCase();
+            return itemName.includes(searchQuery) || 
+                   customer.includes(searchQuery) || 
+                   error.includes(searchQuery);
+        });
+    } else {
+        // 2. If NOT searching, just use the 'raw' data (which is already filtered by date)
+        listData = [...raw]; 
+    }
+
+    // 3. Group and Render the Items
+    const groupedData = {};
+    listData.forEach(r => {
+        const isValid = (r.cat !== 'Pawn' || r.status === 'Collected');
+        if(isValid) {
             const key = r.item + "||" + r.cat + "||" + (r.error || "") + "||" + (r.customer || ""); 
-            
             if (!groupedData[key]) {
                 let initialVal;
                 if (r.cat === 'Pawn') {
@@ -1307,12 +1376,10 @@ async function refreshReportDisplay(manualDate = null) {
                 } else {
                     initialVal = (r.cat === 'Expense' || r.cat === 'ServiceExpense') ? (r.buy || 0) : (r.sell || 0);
                 }
-                
                 groupedData[key] = { ...r, count: 1, displayPrice: initialVal }; 
             } else {
                 groupedData[key].qty += (r.qty || 0);
                 groupedData[key].count += 1;
-                
                 if (r.cat === 'Expense' || r.cat === 'ServiceExpense') {
                     groupedData[key].displayPrice += (r.buy || 0);
                 } else {
@@ -1322,23 +1389,21 @@ async function refreshReportDisplay(manualDate = null) {
         }
     });
 
-    document.getElementById('report-financial-summary').innerHTML = `
-        <div style="display:flex; justify-content:space-between; font-size:16px; padding:10px;">
-            <span>Revenue: $${rev.toFixed(2)}</span>
-            <span>Profit: <b style="color:var(--success)">$${prof.toFixed(2)}</b></span>
-        </div>
-    `;
+    const itemsList = document.getElementById('report-items-list');
+    const results = Object.values(groupedData).reverse();
 
-    // 5. Render Grouped Cards
-    document.getElementById('report-items-list').innerHTML = Object.values(groupedData).reverse().map(r => {
+    if (results.length === 0) {
+        itemsList.innerHTML = `<div style="text-align:center; padding:20px; opacity:0.5;">No items match "${searchQuery}"</div>`;
+        return;
+    }
+
+    itemsList.innerHTML = results.map(r => {
         const isExp = (r.cat === 'Expense' || r.cat === 'ServiceExpense');
-        
         let secondaryText = '';
         if (r.cat === 'Repair') {
             const cust = r.customer ? `<span style="color:var(--primary); font-weight:bold;">[${r.customer}]</span> ` : '';
             const modelClean = r.item.replace("Service: ", "");
             const prob = r.error ? `<br>⚠ Problem: ${r.error}` : '';
-            
             secondaryText = `<div style="color: var(--warning); font-size: 12px; margin-top: 2px; font-style: italic;">
                                 ${cust} <b>${modelClean}</b> ${prob}
                              </div>`;
@@ -1365,7 +1430,7 @@ async function refreshReportDisplay(manualDate = null) {
             </div>
         </div>`;
     }).join('');
-}
+} 
     async function deleteRec(id) {
     if(confirm("Delete this record permanently?")) { 
         // 1. GET THE RECORD DATA BEFORE DELETING
