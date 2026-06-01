@@ -599,8 +599,11 @@ section:not(.hidden) {
     const db = new Dexie("EliteShop_Pro_V11_Final");
     
    db.version(1).stores({ 
-        records: '++id, date, cat, item, buy, sell, status, qty',
-        inventory: '++id, type, sub, name, buy, sell, qty, specs, cond'
+        records: '++id, date, cat, item, buy, sell, status, qty, jobId',
+        inventory: '++id, type, sub, name, buy, sell, qty, specs, cond',
+		history: '++id, type, item, date', // ADD THIS LINE,
+		service_jobs: '++id, jobId, customer, model, phone, status, date, timestamp, price, costPrice, error', // Added price fields & error
+		settings: 'id' // This will store our vault_data
     });
 
     let currentReportFilter = 'All';
